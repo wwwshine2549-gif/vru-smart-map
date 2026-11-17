@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>VRU Smart Map — หุ่นจำลองดิจิทัล</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1d1f22; --ink2:#5b5f66; --ink3:#8b9096;
+  --paper:#f6f3ec; --card:#fffdf8; --line:#d9d3c6; --line2:#ebe6db;
+  --accent:#ff5a1f; --accent-soft:#ffe3d6;
+  --edu:#3b6ef5; --service:#7a5af8; --shop:#e8930c; --sport:#11a37f; --dorm:#e0457b; --landmark:#c0392b; --school:#0aa2c0;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'IBM Plex Sans Thai',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:var(--sans);color:var(--ink);
+  background:radial-gradient(120% 90% at 50% 40%,#efebe3 0%,#dcd6ca 60%,#c9c2b4 100%)}
+#scene{position:fixed;inset:0;display:block;touch-action:none}
+#tags{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.tag{position:absolute;left:0;top:0;transform:translate(-50%,-100%);pointer-events:auto;cursor:pointer;
+  font:600 10.5px/1 var(--mono);color:var(--ink);background:var(--card);border:1px solid var(--line);
+  padding:3px 5px 3px 4px;border-radius:3px;display:flex;align-items:center;gap:4px;white-space:nowrap;
+  box-shadow:0 1px 2px rgba(0,0,0,.08);transition:opacity .25s,background .2s;will-change:transform}
+.tag::after{content:"";position:absolute;left:50%;bottom:-5px;width:1px;height:5px;background:var(--ink3)}
+.tag i{width:6px;height:6px;border-radius:50%;background:var(--c,#999);display:block}
+.tag:hover,.tag.hot{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tag.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tag.sel i,.tag.hot i,.tag:hover i{background:#fff}
+.tag.dim{opacity:.18}
+.tag.hide{display:none}
+.slabel{position:absolute;transform:translate(-50%,-50%);font:500 10px/1 var(--mono);letter-spacing:.14em;
+  color:rgba(29,31,34,.55);text-transform:uppercase;white-space:nowrap;pointer-events:none}
+
+/* top bar */
+#top{position:fixed;left:16px;top:16px;right:16px;display:flex;gap:12px;align-items:flex-start;pointer-events:none;z-index:5}
+.brand{pointer-events:auto;background:var(--ink);color:#fff;border-radius:6px;padding:10px 14px 10px 12px;display:flex;gap:10px;align-items:center}
+.brand .mark{width:28px;height:28px;border:1.5px solid #fff;border-radius:4px;display:grid;place-items:center;font:600 11px var(--mono)}
+.brand b{font:600 13px/1.1 var(--mono);letter-spacing:.08em;display:block}
+.brand small{font-size:11px;opacity:.7;display:block;margin-top:2px}
+.brand .ver{font:500 9.5px var(--mono);border:1px solid rgba(255,255,255,.35);padding:2px 5px;border-radius:3px;margin-left:4px;opacity:.85}
+.search{pointer-events:auto;position:relative;flex:0 1 360px}
+.search input{width:100%;height:48px;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:0 14px 0 40px;
+  font:500 14px var(--sans);color:var(--ink);outline:none;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.search input:focus{border-color:var(--ink)}
+.search svg{position:absolute;left:13px;top:15px;width:18px;height:18px;stroke:var(--ink2)}
+.search kbd{position:absolute;right:12px;top:15px;font:500 10px var(--mono);color:var(--ink3);border:1px solid var(--line);border-radius:3px;padding:2px 5px}
+.results{position:absolute;top:54px;left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden;
+  box-shadow:0 10px 30px rgba(0,0,0,.12);display:none;max-height:340px;overflow-y:auto}
+.results.on{display:block}
+.res{display:flex;gap:10px;align-items:center;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line2);font-size:13px}
+.res:last-child{border-bottom:0}
+.res:hover,.res.act{background:var(--paper)}
+.res .n{font:600 11px var(--mono);min-width:30px;color:var(--ink2)}
+.res .d{width:7px;height:7px;border-radius:50%;flex:none}
+.res.empty{color:var(--ink3);cursor:default}
+.compass{pointer-events:auto;margin-left:auto;width:48px;height:48px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.compass div{font:600 10px var(--mono);transition:transform .05s linear;display:flex;flex-direction:column;align-items:center;gap:1px}
+.compass div::before{content:"";width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid var(--accent)}
+
+/* filters */
+#filters{position:fixed;left:16px;bottom:16px;display:flex;flex-wrap:wrap;gap:6px;max-width:min(620px,calc(100% - 32px));z-index:4}
+.chip{font:500 12px var(--sans);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 11px 6px 9px;
+  display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;transition:all .15s}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.chip:hover{border-color:var(--ink)}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chip .cnt{font:500 10px var(--mono);opacity:.55}
+
+/* tools */
+#tools{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:6px;z-index:4}
+.tool{width:44px;height:44px;border-radius:6px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;position:relative}
+.tool:hover{border-color:var(--ink)}
+.tool.on{background:var(--ink);border-color:var(--ink)}
+.tool.on svg{stroke:#fff}
+.tool svg{width:19px;height:19px;stroke:var(--ink);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tool span{position:absolute;right:52px;white-space:nowrap;background:var(--ink);color:#fff;font-size:11.5px;padding:4px 8px;border-radius:4px;opacity:0;pointer-events:none;transition:opacity .15s}
+.tool:hover span{opacity:1}
+
+/* plaque (homage to the physical model label) */
+#plaque{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#fbf6e6;border:1px solid #d8cfb4;outline:3px double #e8e0c6;outline-offset:-7px;
+  padding:9px 16px;font-size:11px;color:#6b6450;text-align:center;line-height:1.45;z-index:3;pointer-events:none;transition:opacity .3s}
+#plaque b{font:600 10.5px var(--mono);letter-spacing:.12em;color:#4a4536;display:block}
+
+/* panel */
+#panel{position:fixed;top:16px;right:16px;bottom:16px;width:380px;background:var(--card);border:1px solid var(--line);border-radius:8px;z-index:6;
+  box-shadow:0 20px 50px rgba(0,0,0,.15);display:flex;flex-direction:column;transform:translateX(calc(100% + 24px));transition:transform .45s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+#panel.open{transform:none}
+.p-head{padding:18px 18px 14px;border-bottom:1px solid var(--line2);position:relative}
+.p-id{font:600 11px var(--mono);letter-spacing:.1em;color:var(--ink2);display:flex;gap:8px;align-items:center}
+.p-id .code{background:var(--ink);color:#fff;padding:3px 6px;border-radius:3px}
+.p-name{font-size:20px;font-weight:600;line-height:1.3;margin-top:10px;padding-right:36px}
+.p-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.pc{font:500 11px var(--sans);border-radius:3px;padding:3px 7px;background:var(--paper);border:1px solid var(--line2);display:flex;gap:5px;align-items:center}
+.pc i{width:7px;height:7px;border-radius:50%;background:var(--c)}
+.pc.warn{background:#fff4e5;border-color:#f3d7a8;color:#8a5a00}
+.close{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:6px;border:1px solid var(--line2);background:var(--card);cursor:pointer;display:grid;place-items:center}
+.close:hover{border-color:var(--ink)}
+.close svg{width:14px;height:14px;stroke:var(--ink);stroke-width:2}
+.p-body{overflow-y:auto;padding:16px 18px 18px;flex:1}
+.photo{aspect-ratio:16/9;border-radius:6px;border:1px dashed #c9c1ad;display:grid;place-items:center;text-align:center;padding:14px;color:var(--ink2);font-size:12px;line-height:1.5;
+  background:repeating-linear-gradient(-45deg,#f7f3ea 0 8px,#f1ece0 8px 16px)}
+.photo code{font:500 10.5px var(--mono);background:#fff;border:1px solid var(--line);padding:2px 6px;border-radius:3px;display:inline-block;margin-top:6px;color:var(--ink)}
+.grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line2);border-radius:6px;margin-top:14px;overflow:hidden}
+.cell{padding:10px 12px;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.cell:nth-child(2n){border-right:0}
+.cell:nth-last-child(-n+2){border-bottom:0}
+.cell small{display:block;font:500 10px var(--mono);letter-spacing:.08em;color:var(--ink3);text-transform:uppercase}
+.cell b{display:block;font-size:14px;font-weight:600;margin-top:3px}
+.cell b em{font-style:normal;font-weight:400;font-size:11px;color:var(--ink3)}
+.sec{margin-top:16px}
+.sec h4{font:600 10.5px var(--mono);letter-spacing:.12em;color:var(--ink2);text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between}
+.todo{font-size:12.5px;color:var(--ink2);background:var(--paper);border-radius:6px;padding:10px 12px;line-height:1.55}
+.p-foot{padding:12px 18px 16px;border-top:1px solid var(--line2);display:grid;grid-template-columns:1fr auto;gap:8px}
+.btn{height:42px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:#fff;font:600 13px var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 14px;text-decoration:none}
+.btn.ghost{background:var(--card);color:var(--ink)}
+.btn[disabled]{background:#e9e5dc;border-color:#e9e5dc;color:#9a958a;cursor:not-allowed}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.hint{grid-column:1/-1;font-size:11px;color:var(--ink3)}
+.nav{display:flex;gap:6px;margin-top:16px}
+.nav button{flex:1;height:34px;border:1px solid var(--line);background:var(--card);border-radius:5px;font:500 12px var(--sans);cursor:pointer;color:var(--ink2)}
+.nav button:hover{border-color:var(--ink);color:var(--ink)}
+
+/* list */
+#list{position:fixed;inset:0;background:rgba(29,31,34,.35);z-index:8;display:none;align-items:flex-start;justify-content:center;padding:70px 16px 16px}
+#list.on{display:flex}
+.list-box{background:var(--card);border-radius:8px;width:min(560px,100%);max-height:100%;overflow:auto;border:1px solid var(--line)}
+.list-box h3{position:sticky;top:0;background:var(--card);padding:16px 18px;border-bottom:1px solid var(--line2);font-size:15px;display:flex;justify-content:space-between;align-items:center;z-index:1}
+.zone-h{font:600 10.5px var(--mono);letter-spacing:.12em;color:var(--ink3);padding:14px 18px 6px;text-transform:uppercase}
+.li{display:flex;gap:10px;align-items:center;padding:9px 18px;cursor:pointer;font-size:13.5px}
+.li:hover{background:var(--paper)}
+.li .n{font:600 11px var(--mono);min-width:28px;color:var(--ink2)}
+.li .d{width:7px;height:7px;border-radius:50%}
+
+#toast{position:fixed;left:50%;top:80px;transform:translate(-50%,-10px);background:var(--ink);color:#fff;font-size:12.5px;padding:8px 14px;border-radius:5px;opacity:0;transition:all .25s;z-index:9;pointer-events:none}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;padding:5px 9px;border-radius:4px;z-index:7;opacity:0;transition:opacity .12s;white-space:nowrap}
+#tip b{font:600 10.5px var(--mono);margin-right:6px;opacity:.7}
+
+#loader{position:fixed;inset:0;background:#e6e1d7;display:grid;place-items:center;z-index:20;transition:opacity .6s}
+#loader.done{opacity:0;pointer-events:none}
+#loader div{font:500 12px var(--mono);letter-spacing:.14em;color:var(--ink2);text-align:center}
+#loader div::after{content:"";display:block;width:140px;height:2px;margin:12px auto 0;background:linear-gradient(90deg,var(--ink) 0 40%,transparent 40%);background-size:200% 100%;animation:ld 1s linear infinite}
+@keyframes ld{to{background-position:-200% 0}}
+
+@media (max-width:760px){
+  #top{left:10px;right:10px;top:10px;flex-wrap:wrap;gap:8px}
+  .brand{padding:8px 10px}
+  .brand small{display:none}
+  .search{flex:1 1 100%;order:3}
+  .search kbd{display:none}
+  .compass{width:42px;height:42px}
+  #plaque{display:none}
+  #filters{left:10px;bottom:10px;right:64px;flex-wrap:nowrap;overflow-x:auto;max-width:none;scrollbar-width:none}
+  #filters::-webkit-scrollbar{display:none}
+  .chip{flex:none}
+  #tools{right:10px;bottom:10px}
+  .tool span{display:none}
+  #panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:64vh;border-radius:14px 14px 0 0;transform:translateY(105%)}
+  #panel.open{transform:none}
+  #panel::before{content:"";width:40px;height:4px;border-radius:2px;background:var(--line);position:absolute;left:50%;top:7px;transform:translateX(-50%)}
+  .p-name{font-size:17px}
+  .photo{aspect-ratio:21/9}
+}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="tags"></div>
+
+<div id="top">
+  <div class="brand">
+    <div class="mark">VRU</div>
+    <div><b>SMART MAP<span class="ver">PROTO v0.1</span></b><small>หุ่นจำลองดิจิทัล · มรภ.วไลยอลงกรณ์</small></div>
+  </div>
+  <div class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" placeholder="ค้นหาอาคาร หมายเลข หรือหน่วยงาน…" autocomplete="off">
+    <kbd>/</kbd>
+    <div class="results" id="results"></div>
+  </div>
+  <div class="compass" id="compass" title="หันทิศเหนือ"><div id="needle">N</div></div>
+</div>
+
+<div id="filters"></div>
+
+<div id="tools">
+  <div class="tool" id="tHome"><svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg><span>ภาพรวมทั้งมหาวิทยาลัย</span></div>
+  <div class="tool on" id="tTags"><svg viewBox="0 0 24 24"><path d="M4 5h9l7 7-7 7H4z"/><circle cx="8.5" cy="12" r="1.3"/></svg><span>ป้ายหมายเลขอาคาร</span></div>
+  <div class="tool" id="tList"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg><span>รายการอาคารทั้งหมด</span></div>
+</div>
+
+<div id="plaque"><b>หุ่นจำลองดิจิทัล · DIGITAL CAMPUS MODEL</b>มหาวิทยาลัยราชภัฏวไลยอลงกรณ์ ในพระบรมราชูปถัมภ์ · อ้างอิงแผนผังอาคาร 48 จุด · ตำแหน่งยังไม่ตรวจพิกัดจริง</div>
+
+<aside id="panel" aria-live="polite">
+  <div class="p-head">
+    <div class="p-id"><span class="code" id="pCode">B00</span><span id="pZone">ZONE</span></div>
+    <div class="p-name" id="pName">—</div>
+    <div class="p-chips" id="pChips"></div>
+    <button class="close" id="pClose" aria-label="ปิด"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div class="p-body">
+    <div class="photo" id="pPhoto"></div>
+    <div class="grid" id="pGrid"></div>
+    <div class="sec"><h4><span>ชั้น · ห้องสำคัญ</span><span>ROOMS</span></h4><div class="todo">รอข้อมูลจากการลงพื้นที่ — ทีมสำรวจกรอกในคอลัมน์ <b>rooms</b> ของ Google Sheet แล้วจะแสดงที่นี่อัตโนมัติ</div></div>
+    <div class="sec"><h4><span>ลิงก์ตรง (สำหรับ QR)</span><span>DEEP LINK</span></h4><div class="todo" id="pLink"></div></div>
+    <div class="nav"><button id="pPrev">← อาคารก่อนหน้า</button><button id="pNext">อาคารถัดไป →</button></div>
+  </div>
+  <div class="p-foot">
+    <button class="btn" id="pNav" disabled><svg viewBox="0 0 24 24"><path d="M12 2 4 21l8-4 8 4z"/></svg>นำทางด้วย Google Maps</button>
+    <button class="btn ghost" id="pCopy" title="คัดลอกลิงก์"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button>
+    <div class="hint" id="pHint">ปุ่มนำทางจะเปิดใช้เมื่อได้พิกัดจุดอ้างอิง 3 จุด</div>
+  </div>
+</aside>
+
+<div id="list"><div class="list-box"><h3>อาคารทั้งหมด <button class="close" style="position:static" id="lClose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></h3><div id="listBody"></div></div></div>
+<div id="toast"></div>
+<div id="tip"></div>
+<div id="loader"><div>กำลังประกอบหุ่นจำลอง</div></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ============ DATA ============
+   rects: [x, y, w, h, floorsOverride?, rotationDeg?]  (pixel coords from the 2D building layout)
+   Next step: load from Google Sheet (id, name, cat, floors, rooms, lat, lng, last_verified, photos) */
+const CATS = {
+  edu:{name:'อาคารเรียน/คณะ',c:'#3b6ef5'}, service:{name:'สำนักงาน/บริการ',c:'#7a5af8'},
+  shop:{name:'อาหาร/ร้านค้า',c:'#e8930c'}, sport:{name:'กีฬา',c:'#11a37f'},
+  dorm:{name:'หอพัก/ที่พัก',c:'#e0457b'}, landmark:{name:'สัญลักษณ์/วัฒนธรรม',c:'#c0392b'},
+  school:{name:'โรงเรียนสาธิต',c:'#0aa2c0'}
+};
+const B = [
+ [1,'อนุสาวรีย์ เจ้าฟ้าวไลยอลงกรณ์','landmark',1,[[383,318,14,14]],'monument'],
+ [2,'หอพระ','landmark',1,[[258,300,20,20,1,45]],'shrine'],
+ [3,'อาคารสมเด็จเจ้าฟ้าวไลยอลงกรณ์','service',4,[[183,265,22,113]]],
+ [4,'อาคารสระว่ายน้ำอวยพร เปล่งวานิช','sport',1,[[180,440,30,40]],'pool'],
+ [5,'อาคาร 80 ปี วไลยอลงกรณ์','landmark',3,[[318,395,143,75]],'hall'],
+ [6,'อาคารปฏิบัติการด้านธุรกิจบริการ','edu',3,[[178,548,30,24]]],
+ [7,'อาคารส่งเสริมการเรียนรู้','service',4,[[188,577,25,110]]],
+ [8,'อาคาร 100 ปี สมเด็จพระศรีนครินทร์','service',16,[[355,612,80,62,4],[372,585,46,58,16]]],
+ [9,'อาคาร 75 ปี วไลยอลงกรณ์','service',6,[[575,400,22,115]]],
+ [10,'อาคารศูนย์วิทยาศาสตร์','service',5,[[568,565,25,110]]],
+ [11,'อาคารแสดงผลงานนักศึกษา','service',2,[[186,710,35,20]]],
+ [12,'อาคาร 60 ปี วไลยอลงกรณ์','service',3,[[186,735,30,40]]],
+ [13,'อาคารหอประชุมวไลยอลงกรณ์','landmark',4,[[322,725,57,55]]],
+ [14,'อาคารโรงอาหาร','shop',2,[[385,725,60,55]]],
+ [15,'อาคารกีฬาในร่ม 1','sport',3,[[458,730,62,48]]],
+ [16,'คณะเทคโนโลยีการเกษตร','edu',3,[[568,735,25,130],[598,690,20,85]]],
+ [17,'อาคารคณะครุศาสตร์ (อาคารเรียน 7)','edu',5,[[488,782,25,85]]],
+ [18,'อาคารกองพัฒนานักศึกษา','service',3,[[440,805,28,55]]],
+ [19,'อาคารคณะวิทยาศาสตร์และเทคโนโลยี (อาคารเรียน 5)','edu',5,[[343,817,58,24],[398,805,22,115]]],
+ [20,'อาคารคณะครุศาสตร์ (อาคารเรียน 6)','edu',5,[[460,900,27,90],[437,935,25,30]]],
+ [21,'ธนาคารกรุงไทย','shop',1,[[253,840,25,20]]],
+ [22,'ร้าน Family Mart','shop',1,[[295,840,25,20]]],
+ [23,'อาคารพยาบาล','service',3,[[305,868,22,40]]],
+ [24,'อาคารโรงเรียนสาธิต (มัธยม)','school',3,[[305,915,20,65],[272,888,22,45]]],
+ [25,'อาคารโรงเรียนสาธิต (มัธยม)','school',3,[[305,1018,35,120],[255,1092,52,46]]],
+ [26,'อาคารสำนักวิทยบริการและเทคโนโลยีสารสนเทศ','service',5,[[375,975,26,30],[403,985,22,60],[403,1025,92,22]]],
+ [27,'อาคารคณะมนุษยศาสตร์และสังคมศาสตร์ (อาคารเรียน 8)','edu',5,[[397,1065,98,28],[397,1065,26,65],[455,1090,40,40]]],
+ [28,'อาคารเรียนรวม 6 ชั้น','edu',6,[[562,975,50,135]]],
+ [29,'ศูนย์เรียนรู้เศรษฐกิจพอเพียง','service',2,[[602,1125,22,35]]],
+ [30,'อาคารปฏิบัติการคหกรรมศาสตร์','edu',2,[[190,806,22,22]]],
+ [31,'อาคารคณะวิทยาการจัดการ (อาคารเรียน 2)','edu',4,[[192,832,22,278]]],
+ [32,'อาคารเรียนรวมวิทยาศาสตร์','edu',5,[[102,1030,45,115]]],
+ [33,'เรือนเจ้าฟ้า (เรือนไทยภาคกลาง)','landmark',1,[[290,1247,55,40]],'thai'],
+ [34,'อาคารโรงเรียนสาธิต (ประถม)','school',4,[[493,1225,65,38],[515,1225,40,105]]],
+ [35,'อาคารกีฬาในร่ม 2','sport',3,[[462,1318,40,45]]],
+ [36,'อาคารกีฬาในร่ม 3','sport',3,[[522,1438,40,75]]],
+ [37,'หอพักเพทาย','dorm',6,[[402,1365,25,48]]],
+ [38,'หอพักโกเมน','dorm',6,[[370,1410,22,55]]],
+ [39,'อาคารปฏิบัติการเทคโนโลยีอุตสาหกรรม 3','edu',2,[[328,1358,18,48]]],
+ [40,'อาคารปฏิบัติการเทคโนโลยีอุตสาหกรรม 2','edu',2,[[300,1358,18,48]]],
+ [41,'อาคารปฏิบัติการเทคโนโลยีอุตสาหกรรม 1','edu',2,[[272,1358,18,48]]],
+ [42,'อาคารกิจกรรมนักศึกษาคณะเทคโนโลยีอุตสาหกรรม','edu',2,[[218,1385,35,25]]],
+ [43,'อาคารคณะเทคโนโลยีอุตสาหกรรม (อาคารเรียน 9)','edu',5,[[280,1430,33,95]]],
+ [44,'หอพักนักศึกษา','dorm',8,[[313,1715,20,95],[343,1690,22,125],[375,1680,22,140],[435,1635,25,140]]],
+ [45,'อาคารหอพักนักศึกษานานาชาติ (กำลังก่อสร้าง)','dorm',8,[[305,1845,160,90]],'wire'],
+ [46,'อาคารศูนย์อนุรักษ์พันธุกรรมพืช','service',2,[[236,1693,40,30,2,45]]],
+ [47,'อาคารศูนย์การศึกษาพัฒนาความหลากหลายฯ','service',1,[[38,1829,165,12,1,-44]]],
+ [48,'บ้านพักอาจารย์และบุคลากร','dorm',1,[],'houses'],
+];
+// 48: staff housing — generated grid
+const houses=[];
+for(let r=0;r<3;r++) for(let c=0;c<9;c++){ if((r===1&&c===4)) continue; houses.push([248+c*36,2262+r*42,20,22,1]); }
+for(let y=1445;y<2380;y+=38) houses.push([600,y,16,24,1]);
+for(let y=1545;y<1910;y+=36) houses.push([562,y,14,22,1]);
+B.find(b=>b[0]===48)[4]=houses;
+
+const zoneOf=id=> (id<=12||(id>=30&&id<=32))?1 : id<=29?2 : id<=43?3 : 4;
+const ZONES={1:'โซน 1 · หน้ามหาวิทยาลัย',2:'โซน 2 · กลาง',3:'โซน 3 · อุตสาหกรรม/สาธิต',4:'โซน 4 · หอพัก/สนามกีฬา'};
+const DATA = B.map(([id,name,cat,floors,rects,kind])=>({id,name,cat,floors,rects,kind,zone:zoneOf(id),lat:null,lng:null,verified:null}));
+
+/* ============ SCENE ============ */
+const S=0.1, CX=335, CY=1250, FH=0.42;
+const X=px=>(px-CX)*S, Z=py=>(py-CY)*S;
+const canvas=document.getElementById('scene');
+const isMobile=matchMedia('(max-width:760px)').matches;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile?1.75:2));
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(35,innerWidth/innerHeight,1,1500);
+const controls=new OrbitControls(camera,canvas);
+controls.enableDamping=true; controls.dampingFactor=.08; controls.maxPolarAngle=1.32; controls.minDistance=10; controls.maxDistance=420;
+controls.screenSpacePanning=false; controls.zoomSpeed=.9; controls.rotateSpeed=.6;
+
+scene.add(new THREE.HemisphereLight(0xfffaf0,0xb8b2a2,1.15));
+const sun=new THREE.DirectionalLight(0xfff3e0,2.2);
+sun.position.set(-60,110,-40); sun.castShadow=true;
+const sm=sun.shadow; sm.mapSize.set(isMobile?1024:2048,isMobile?2048:4096);
+Object.assign(sm.camera,{left:-45,right:45,top:125,bottom:-125,near:10,far:400}); sm.bias=-0.0006; sm.normalBias=.04; sm.radius=3;
+sun.target.position.set(0,0,0); scene.add(sun,sun.target);
+
+const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.9,metalness:0,...o});
+const mat={grass:M(0x9db57b),grass2:M(0x86a466),road:M(0xd3d1ca),asph:M(0x55595e,{roughness:.8}),
+  water:M(0x7fb0cf,{roughness:.25}),park:M(0xc8c6be),plinth:M(0x2b2d31,{roughness:.6}),court:M(0xa65a48),courtIn:M(0x4d8a62),
+  track:M(0xc9785a),field:M(0x5f9b55),white:M(0xf6f4ef),tree:M(0x3f6b45,{flatShading:true}),tree2:M(0x55834f,{flatShading:true}),
+  gold:M(0xd9b45a,{roughness:.4,metalness:.3}),wood:M(0x7a4a2c),line:M(0xffffff)};
+
+function slab(x,y,w,h,m,top=0.02,th=0.04,rot=0){
+  const g=new THREE.BoxGeometry(w*S,th,h*S); const mesh=new THREE.Mesh(g,m);
+  mesh.position.set(X(x+w/2),top-th/2,Z(y+h/2)); mesh.rotation.y=rot; mesh.receiveShadow=true; scene.add(mesh); return mesh;
+}
+function poly(pts,width,m,top=0.03,th=0.05){
+  for(let i=0;i<pts.length-1;i++){
+    const [x1,y1]=pts[i],[x2,y2]=pts[i+1]; const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy);
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(len*S,th,width*S),m);
+    mesh.position.set(X((x1+x2)/2),top-th/2,Z((y1+y2)/2)); mesh.rotation.y=-Math.atan2(dy,dx); mesh.receiveShadow=true; scene.add(mesh);
+    const j=new THREE.Mesh(new THREE.CylinderGeometry(width*S/2,width*S/2,th,16),m); j.position.set(X(x2),top-th/2,Z(y2)); j.receiveShadow=true; scene.add(j);
+  }
+}
+// plinth + grass
+{
+  const w=(655-10)*S, d=(2410-118)*S, cx=X((655+10)/2), cz=Z((2410+118)/2);
+  const base=new THREE.Mesh(new THREE.BoxGeometry(w+1.6,3,d+1.6),[mat.plinth,mat.plinth,mat.plinth,mat.plinth,mat.plinth,mat.plinth]);
+  base.position.set(cx,-1.56,cz); scene.add(base);
+  const g=new THREE.Mesh(new THREE.BoxGeometry(w,0.2,d),mat.grass); g.position.set(cx,-0.1,cz); g.receiveShadow=true; scene.add(g);
+}
+// Phahonyothin road
+slab(10,135,645,80,mat.asph,0.03,0.06);
+for(let x=20;x<650;x+=38){ slab(x,172,20,2,mat.line,0.035,0.06); }
+slab(10,152,645,1.5,mat.line,0.035,0.06); slab(10,194,645,1.5,mat.line,0.035,0.06);
+// ponds & green
+[[250,290,293,200],[198,1160,240,86],[345,1032,50,106],[45,1175,60,32],[240,1740,62,175],[495,1680,50,150],[280,2105,300,135]]
+  .forEach(r=>slab(...r,mat.water,0.03,0.06));
+slab(198,1246,240,94,mat.grass2,0.025,0.05);
+slab(45,1790,145,255,mat.grass2,0.02,0.04);
+slab(220,1330,65,30,mat.grass2,0.02,0.04);
+// canal
+poly([[655,1245],[560,1330],[420,1440],[290,1545],[210,1630],[170,1720],[120,1900],[75,2130],[50,2330],[40,2405]],24,mat.water,0.03,0.06);
+// parking
+[[170,228,60,40],[468,395,68,95],[268,600,72,65],[440,600,72,65],[62,1050,36,95],[462,1185,140,34],[200,1535,55,65],[230,1955,110,40]]
+  .forEach(r=>slab(...r,mat.park,0.022,0.04));
+// roads
+const R=(p,w=10)=>poly(p,w,mat.road,0.035,0.05);
+R([[42,215],[42,2400]],12);
+R([[242,287],[545,287],[545,1150],[242,1150],[242,287]]);
+R([[242,495],[545,495]]); R([[242,710],[545,710]]);
+R([[370,215],[370,287]]); R([[410,215],[410,287]]); R([[390,287],[390,365]],6);
+R([[172,695],[242,695]]); R([[172,695],[172,1155]]); R([[172,1155],[460,1155]]);
+R([[195,1155],[205,1600],[225,1700],[232,1940]],12);
+R([[455,1155],[468,1340],[485,1420],[560,1395],[590,1430],[590,2395]]);
+R([[480,1495],[300,1640]],7);
+R([[232,1940],[590,1940]]); R([[232,1940],[232,2395],[590,2395]]); R([[232,2100],[590,2100]]); R([[232,2245],[590,2245]]);
+R([[42,1170],[195,1170]],8);
+// courts
+[[250,722,24,28],[276,722,24,28],[250,752,24,28],[276,752,24,28],[495,1535,22,34],[521,1535,22,34],[495,1575,48,30]].forEach(r=>{slab(...r,mat.court,0.04,0.06); slab(r[0]+2,r[1]+2,r[2]-4,r[3]-4,mat.courtIn,0.045,0.06);});
+// stadium
+{
+  const sh=(L,W)=>{const s=new THREE.Shape(),r=W/2,h=L/2-r; s.absarc(h,0,r,-Math.PI/2,Math.PI/2,false); s.absarc(-h,0,r,Math.PI/2,Math.PI*1.5,false); return s;};
+  const mk=(L,W,m,y)=>{const g=new THREE.ExtrudeGeometry(sh(L,W),{depth:.06,bevelEnabled:false,curveSegments:24}); g.rotateX(-Math.PI/2); const o=new THREE.Mesh(g,m); o.position.set(X(410),y,Z(2015)); o.receiveShadow=true; scene.add(o);};
+  mk(27,12.5,mat.track,0.0); mk(21.5,7.4,mat.field,0.01);
+  const st=new THREE.Mesh(new THREE.BoxGeometry(10,1.1,1.6),mat.white); st.position.set(X(410),.55,Z(2093)); st.castShadow=true; scene.add(st);
+}
+
+/* ---- window texture ---- */
+const wt=(()=>{const c=document.createElement('canvas');c.width=64;c.height=64;const g=c.getContext('2d');
+  g.fillStyle='#f4f1ea';g.fillRect(0,0,64,64);g.fillStyle='#a9b2ba';g.fillRect(0,24,64,20);
+  g.fillStyle='#f4f1ea';for(let x=0;x<64;x+=16)g.fillRect(x,24,3,20);g.fillStyle='#d9d4c8';g.fillRect(0,60,64,4);
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;})();
+
+function boxUV(g,w,d,fl){ // scale UVs so windows tile per floor
+  const uv=g.attributes.uv; const faces=[d,d,0,0,w,w];
+  for(let f=0;f<6;f++){ if(!faces[f]) continue; const ru=Math.max(1,Math.round(faces[f]/1.3));
+    for(let v=0;v<4;v++){const i=f*4+v; uv.setXY(i,uv.getX(i)*ru,uv.getY(i)*fl);} }
+  uv.needsUpdate=true;
+}
+
+/* ---- buildings ---- */
+const pickables=[]; const byId=new Map();
+function makeBuilding(b){
+  const grp=new THREE.Group(); grp.userData.b=b;
+  const wall=new THREE.MeshStandardMaterial({map:wt,roughness:.85,color:0xffffff});
+  const roofC = b.kind==='hall'?0x7fb3a3 : b.kind==='pool'?0x7cc6d6 : b.kind==='thai'?0x6e3f24 : 0x8e9399;
+  const roof=new THREE.MeshStandardMaterial({color:roofC,roughness:.8});
+  const plain=new THREE.MeshStandardMaterial({color:0xf2efe8,roughness:.85});
+  const mats=[wall,roof,plain];
+  let maxH=0, minx=1e9,maxx=-1e9,minz=1e9,maxz=-1e9;
+  const add=(mesh)=>{mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.b=b;grp.add(mesh);pickables.push(mesh);};
+  if(b.kind==='monument'){
+    const [x,y]=b.rects[0]; const cx=X(x+7),cz=Z(y+7);
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.8,.4,24),plain); p.position.set(cx,.2,cz); add(p);
+    const s=new THREE.Mesh(new THREE.BoxGeometry(.7,1.6,.7),plain); s.position.set(cx,1.2,cz); add(s);
+    const f=new THREE.Mesh(new THREE.ConeGeometry(.45,1.2,4),M(0xd9b45a,{roughness:.4,metalness:.3})); f.position.set(cx,2.6,cz); f.rotation.y=Math.PI/4; add(f); mats.push(f.material);
+    maxH=3.2; minx=cx-1.8;maxx=cx+1.8;minz=cz-1.8;maxz=cz+1.8;
+  } else if(b.kind==='wire'){
+    const [x,y,w,h]=b.rects[0]; const H=b.floors*FH;
+    const g=new THREE.BoxGeometry(w*S,H,h*S);
+    const glass=new THREE.MeshStandardMaterial({color:0xdfeaf0,transparent:true,opacity:.28,roughness:.1,depthWrite:false});
+    const m=new THREE.Mesh(g,glass); m.position.set(X(x+w/2),H/2,Z(y+h/2)); m.userData.b=b; grp.add(m); pickables.push(m);
+    const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:0x6d7680,transparent:true,opacity:.7})); e.position.copy(m.position); grp.add(e);
+    mats.push(glass,e.material); maxH=H; minx=X(x);maxx=X(x+w);minz=Z(y);maxz=Z(y+h);
+  } else {
+    for(const r of b.rects){
+      const [x,y,w,h,fo,rot]=r; const fl=fo||b.floors; const H=Math.max(fl*FH,.45);
+      const g=new THREE.BoxGeometry(w*S,H,h*S); boxUV(g,w*S,h*S,fl);
+      const m=new THREE.Mesh(g,[wall,wall,roof,plain,wall,wall]);
+      m.position.set(X(x+w/2),H/2,Z(y+h/2)); if(rot) m.rotation.y=-rot*Math.PI/180; add(m);
+      if(b.kind==='thai'||b.kind==='shrine'){
+        const rf=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,h)*S*.72,1.4,4),b.kind==='thai'?roof:M(0xd9b45a,{roughness:.4,metalness:.3}));
+        rf.position.set(m.position.x,H+.7,m.position.z); rf.rotation.y=Math.PI/4+(rot?-rot*Math.PI/180:0); rf.scale.set(1,1,b.kind==='thai'?.62:1); add(rf); if(b.kind==='shrine')mats.push(rf.material);
+        maxH=Math.max(maxH,H+1.4);
+      }
+      if(b.kind==='hall'){ // raised roof canopy like the physical model
+        const c=new THREE.Mesh(new THREE.BoxGeometry(w*S+1.2,.25,h*S+1.2),roof); c.position.set(m.position.x,H+.12,m.position.z); add(c);
+      }
+      maxH=Math.max(maxH,H);
+      const hw=Math.max(w,h)*S/2;
+      minx=Math.min(minx,X(x+w/2)-hw);maxx=Math.max(maxx,X(x+w/2)+hw);minz=Math.min(minz,Z(y+h/2)-hw);maxz=Math.max(maxz,Z(y+h/2)+hw);
+    }
+  }
+  if(b.kind==='houses'){ minx=X(240);maxx=X(615);minz=Z(2245);maxz=Z(2390); }
+  b.center=new THREE.Vector3((minx+maxx)/2,maxH/2,(minz+maxz)/2);
+  b.size=Math.max(maxx-minx,maxz-minz,maxH*1.4);
+  b.top=new THREE.Vector3(b.center.x,maxH+.4,b.center.z);
+  if(b.kind==='houses') b.top.set(X(410),1.2,Z(2250));
+  if(b.id===44) b.top.set(X(390),maxH+.4,Z(1740));
+  b.mats=mats; b.grp=grp; scene.add(grp); byId.set(b.id,b);
+}
+DATA.forEach(makeBuilding);
+
+/* ---- trees (instanced) ---- */
+{
+  const pts=[]; const rnd=(a,b)=>a+Math.random()*(b-a);
+  const blocked=(x,y)=>DATA.some(b=>b.kind!=='houses'&&b.rects.some(([rx,ry,rw,rh])=>x>rx-6&&x<rx+rw+6&&y>ry-6&&y<ry+rh+6));
+  const along=(p,off,step)=>{for(let i=0;i<p.length-1;i++){const[x1,y1]=p[i],[x2,y2]=p[i+1];const L=Math.hypot(x2-x1,y2-y1),nx=-(y2-y1)/L,ny=(x2-x1)/L;
+    for(let t=0;t<L;t+=step){const x=x1+(x2-x1)*t/L,y=y1+(y2-y1)*t/L;[off,-off].forEach(o=>pts.push([x+nx*o+rnd(-2,2),y+ny*o+rnd(-2,2),rnd(.75,1.15)]));}}};
+  along([[655,1245],[560,1330],[420,1440],[290,1545],[210,1630],[170,1720],[120,1900],[75,2130],[50,2330]],22,16);
+  along([[52,240],[52,2390]],0,22); along([[25,240],[25,2390]],0,26);
+  along([[372,1150],[548,1150]],9,20); along([[455,1155],[468,1340]],9,20);
+  along([[240,1935],[580,1935]],9,18); along([[232,1945],[232,2240]],9,22);
+  for(let i=0;i<70;i++) pts.push([rnd(55,180),rnd(1800,2035),rnd(.9,1.6)]);
+  for(let i=0;i<30;i++) pts.push([rnd(205,430),rnd(1300,1335),rnd(.6,1)]);
+  for(let i=0;i<20;i++) pts.push([rnd(470,640),rnd(140,135)+rnd(80,110),rnd(.5,.8)]);
+  const ok=pts.filter(([x,y])=>x>14&&x<650&&y>222&&y<2405&&!blocked(x,y));
+  const geo=new THREE.IcosahedronGeometry(.62,0);
+  const im=new THREE.InstancedMesh(geo,mat.tree,ok.length); const im2=new THREE.InstancedMesh(geo,mat.tree2,ok.length);
+  const d=new THREE.Object3D(); let a=0,b2=0;
+  ok.forEach(([x,y,s],i)=>{d.position.set(X(x),.55*s+.1,Z(y));d.scale.setScalar(s);d.rotation.set(rnd(0,3),rnd(0,3),0);d.updateMatrix();
+    (i%3? im.setMatrixAt(a++,d.matrix) : im2.setMatrixAt(b2++,d.matrix));});
+  im.count=a; im2.count=b2; [im,im2].forEach(m=>{m.castShadow=true;scene.add(m);});
+}
+
+/* ============ UI: tags ============ */
+const tagsEl=document.getElementById('tags'); const tagEls=new Map();
+DATA.forEach(b=>{const t=document.createElement('div');t.className='tag';t.style.setProperty('--c',CATS[b.cat].c);
+  t.innerHTML=`<i></i>${String(b.id).padStart(2,'0')}`; t.title=b.name;
+  t.addEventListener('click',e=>{e.stopPropagation();select(b.id);});
+  t.addEventListener('pointerenter',()=>hover(b)); t.addEventListener('pointerleave',()=>hover(null));
+  tagsEl.appendChild(t); tagEls.set(b.id,t);});
+const staticLabels=[['ถนนพหลโยธิน',330,175,.3],['คลอง',300,1540,.2],['สนามกีฬากลาง',410,2015,.4],['ทางเข้า · ทางออก',390,240,.2]].map(([txt,x,y,h])=>{
+  const el=document.createElement('div');el.className='slabel';el.textContent=txt;tagsEl.appendChild(el);return {el,p:new THREE.Vector3(X(x),h,Z(y))};});
+
+/* ============ interaction ============ */
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+let hovered=null, selected=null, filter=null, showTags=true;
+const ACC=new THREE.Color(0xff5a1f);
+function pick(cx,cy){
+  const r=canvas.getBoundingClientRect(); ndc.set((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1);
+  ray.setFromCamera(ndc,camera); const hit=ray.intersectObjects(pickables,false)[0]; return hit?hit.object.userData.b:null;
+}
+function paint(){
+  for(const b of DATA){
+    const isSel=selected&&selected.id===b.id, isHov=hovered&&hovered.id===b.id;
+    const dim=(selected&&!isSel)||(filter&&b.cat!==filter&&!isSel);
+    b.mats.forEach(m=>{
+      if(m.isLineBasicMaterial){m.opacity=dim?.15:.7;return;}
+      if(b.kind==='wire'&&m.transparent&&m.depthWrite===false&&!dim){m.opacity=isSel||isHov?.45:.28;}
+      else { m.transparent=dim; m.opacity=dim?.22:1; m.depthWrite=!dim; }
+      if(m.emissive){ m.emissive.copy(isSel||isHov?ACC:new THREE.Color(0)); m.emissiveIntensity=isSel?.22:isHov?.16:0; }
+      m.needsUpdate=true;
+    });
+    b.grp.traverse(o=>{if(o.isMesh)o.castShadow=!dim;});
+    const t=tagEls.get(b.id); t.classList.toggle('sel',!!isSel); t.classList.toggle('hot',!!isHov&&!isSel); t.classList.toggle('dim',!!dim);
+  }
+}
+const tip=document.getElementById('tip');
+function hover(b){ if(hovered===b) return; hovered=b; canvas.style.cursor=b?'pointer':'grab'; paint();
+  if(b){tip.innerHTML=`<b>B${String(b.id).padStart(2,'0')}</b>${b.name}`;tip.style.opacity=1;} else tip.style.opacity=0; }
+let down=null;
+canvas.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()};closeResults();});
+canvas.addEventListener('pointerup',e=>{ if(!down) return; const moved=Math.hypot(e.clientX-down.x,e.clientY-down.y); down=null;
+  if(moved<6){ const b=pick(e.clientX,e.clientY); if(b) select(b.id); else if(selected) deselect(); }});
+canvas.addEventListener('pointermove',e=>{ if(e.pointerType!=='mouse'||down) return; hover(pick(e.clientX,e.clientY)); tip.style.left=e.clientX+14+'px'; tip.style.top=e.clientY+14+'px'; });
+canvas.addEventListener('pointerleave',()=>hover(null));
+
+/* ---- camera tween ---- */
+let tween=null;
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function flyTo(pos,tgt,dur=1100){
+  tween={p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:tgt,s:performance.now(),d:dur}; controls.enabled=false;
+}
+function overviewPose(){
+  const a=innerWidth/innerHeight;
+  if(a>=1){ const d=THREE.MathUtils.clamp(250/(0.63*a)*1.05,150,330); return {p:new THREE.Vector3(.86,.62,.12).normalize().multiplyScalar(d),t:new THREE.Vector3(0,0,-2)}; }
+  const d=THREE.MathUtils.clamp(210/(0.63)*1.0*(1/Math.max(a,.45))*.55,200,420);
+  return {p:new THREE.Vector3(.18,.9,.42).normalize().multiplyScalar(d),t:new THREE.Vector3(0,0,-6)};
+}
+function home(){ deselect(true); const o=overviewPose(); flyTo(o.p,o.t,1200); }
+
+/* ---- panel ---- */
+const panel=document.getElementById('panel'); const $=id=>document.getElementById(id);
+let viewOffset=0, viewOffsetTarget=0;
+const ORDER=DATA.map(b=>b.id);
+function select(id,fromHash){
+  const b=byId.get(id); if(!b) return; selected=b; hover(null); paint(); closeResults(); $('list').classList.remove('on');
+  const code='B'+String(b.id).padStart(2,'0');
+  $('pCode').textContent=code; $('pZone').textContent=ZONES[b.zone]; $('pName').textContent=b.name;
+  $('pChips').innerHTML=`<span class="pc" style="--c:${CATS[b.cat].c}"><i></i>${CATS[b.cat].name}</span><span class="pc warn">รอตรวจสอบหน้างาน</span>`;
+  $('pPhoto').innerHTML=`<div>ยังไม่มีรูป — ทีมสำรวจ${ZONES[b.zone].split(' · ')[0]}<br><code>${code}_hero_01.jpg</code></div>`;
+  const fl=b.kind==='monument'?'—':b.kind==='houses'?'1–2':b.rects.reduce((m,r)=>Math.max(m,r[4]||b.floors),0);
+  $('pGrid').innerHTML=`
+    <div class="cell"><small>จำนวนชั้น</small><b>${fl} <em>(ประมาณจากหุ่น)</em></b></div>
+    <div class="cell"><small>เวลาเปิด</small><b>— <em>รอสำรวจ</em></b></div>
+    <div class="cell"><small>ตรวจสอบล่าสุด</small><b>ยังไม่ตรวจ</b></div>
+    <div class="cell"><small>พิกัด</small><b>— <em>รอจุดอ้างอิง</em></b></div>`;
+  $('pLink').innerHTML=`เปิดลิงก์ที่ลงท้ายด้วย <b style="font-family:var(--mono)">#b${b.id}</b> แล้วกล้องจะพามาที่อาคารนี้ทันที — ใช้ทำ QR ติดหน้าอาคาร`;
+  panel.classList.add('open'); document.getElementById('plaque').style.opacity=0;
+  viewOffsetTarget = 1;
+  try{ if(location.hash!=='#b'+b.id) history.replaceState(null,'','#b'+b.id); }catch(e){ if(!fromHash) location.hash='b'+b.id; }
+  // camera
+  const dir=camera.position.clone().sub(controls.target); dir.y=0; if(dir.lengthSq()<1e-3) dir.set(1,0,.3); dir.normalize();
+  const dist=THREE.MathUtils.clamp(b.size*2.4+20,22,85)*(isMobile?1.3:1);
+  const elev=.78; // radians above horizon
+  const pos=b.center.clone().add(new THREE.Vector3(dir.x*Math.cos(elev),Math.sin(elev),dir.z*Math.cos(elev)).multiplyScalar(dist));
+  const tgt=b.center.clone(); if(isMobile){ tgt.z+=0; }
+  flyTo(pos,tgt,1050);
+}
+function deselect(silent){ if(!selected&&silent) {return;} selected=null; panel.classList.remove('open'); viewOffsetTarget=0; paint(); document.getElementById('plaque').style.opacity=1;
+  try{history.replaceState(null,'',location.pathname+location.search);}catch(e){} }
+$('pClose').onclick=()=>deselect();
+$('pPrev').onclick=()=>{ if(!selected) return; const i=ORDER.indexOf(selected.id); select(ORDER[(i-1+ORDER.length)%ORDER.length]); };
+$('pNext').onclick=()=>{ if(!selected) return; const i=ORDER.indexOf(selected.id); select(ORDER[(i+1)%ORDER.length]); };
+$('pCopy').onclick=async()=>{ if(!selected) return; const url=location.href.split('#')[0]+'#b'+selected.id;
+  try{await navigator.clipboard.writeText(url); toast('คัดลอกลิงก์ตรงแล้ว');}catch(e){toast('ลิงก์ตรง: #b'+selected.id);} };
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('on'),1800);}
+addEventListener('hashchange',()=>{const m=location.hash.match(/^#b(\d+)$/); if(m&&(!selected||selected.id!=+m[1])) select(+m[1],true);});
+
+/* ---- search ---- */
+const q=$('q'), res=$('results'); let act=0, hits=[];
+function norm(s){return s.toLowerCase().replace(/\s+/g,'');}
+function doSearch(){
+  const v=norm(q.value); if(!v){closeResults();return;}
+  const num=v.replace(/^b/,''); hits=DATA.filter(b=>String(b.id)===num||norm(b.name).includes(v)||norm(CATS[b.cat].name).includes(v)).slice(0,8); act=0; renderRes();
+}
+function renderRes(){
+  res.innerHTML = hits.length? hits.map((b,i)=>`<div class="res ${i===act?'act':''}" data-id="${b.id}"><span class="n">B${String(b.id).padStart(2,'0')}</span><span class="d" style="background:${CATS[b.cat].c}"></span>${b.name}</div>`).join('')
+    : `<div class="res empty">ไม่พบ — ลองพิมพ์หมายเลขอาคาร เช่น 19</div>`;
+  res.classList.add('on');
+  res.querySelectorAll('.res[data-id]').forEach(el=>el.onclick=()=>{select(+el.dataset.id);q.blur();});
+}
+function closeResults(){res.classList.remove('on');}
+q.addEventListener('input',doSearch); q.addEventListener('focus',doSearch);
+q.addEventListener('keydown',e=>{
+  if(e.key==='ArrowDown'){act=Math.min(act+1,hits.length-1);renderRes();e.preventDefault();}
+  else if(e.key==='ArrowUp'){act=Math.max(act-1,0);renderRes();e.preventDefault();}
+  else if(e.key==='Enter'&&hits[act]){select(hits[act].id);q.blur();}
+  else if(e.key==='Escape'){closeResults();q.blur();}
+});
+addEventListener('keydown',e=>{ if(e.target===q) return;
+  if(e.key==='/'){e.preventDefault();q.focus();} else if(e.key==='Escape'){ $('list').classList.remove('on'); deselect(); }
+  else if(selected&&e.key==='ArrowRight') $('pNext').click(); else if(selected&&e.key==='ArrowLeft') $('pPrev').click(); });
+
+/* ---- filters ---- */
+const fEl=$('filters');
+Object.entries(CATS).forEach(([k,v])=>{const n=DATA.filter(b=>b.cat===k).length;const c=document.createElement('div');c.className='chip';c.style.setProperty('--c',v.c);
+  c.innerHTML=`<i></i>${v.name}<span class="cnt">${n}</span>`; c.onclick=()=>{filter=filter===k?null:k;fEl.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));if(filter)c.classList.add('on');paint();}; fEl.appendChild(c);});
+
+/* ---- tools ---- */
+$('tHome').onclick=home;
+$('tTags').onclick=()=>{showTags=!showTags;$('tTags').classList.toggle('on',showTags);};
+$('compass').onclick=()=>{ const t=controls.target.clone(); const off=camera.position.clone().sub(t); const r=Math.hypot(off.x,off.z);
+  flyTo(t.clone().add(new THREE.Vector3(0,off.y,r)),t,800); };
+$('tList').onclick=()=>$('list').classList.add('on'); $('lClose').onclick=()=>$('list').classList.remove('on');
+$('list').addEventListener('click',e=>{if(e.target.id==='list')$('list').classList.remove('on');});
+$('listBody').innerHTML=[1,2,3,4].map(z=>`<div class="zone-h">${ZONES[z]}</div>`+DATA.filter(b=>b.zone===z).map(b=>`<div class="li" data-id="${b.id}"><span class="n">B${String(b.id).padStart(2,'0')}</span><span class="d" style="background:${CATS[b.cat].c}"></span>${b.name}</div>`).join('')).join('');
+$('listBody').querySelectorAll('.li').forEach(el=>el.onclick=()=>select(+el.dataset.id));
+
+/* ============ loop ============ */
+const v3=new THREE.Vector3();
+function resize(){ renderer.setSize(innerWidth,innerHeight,false); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize',resize); resize();
+function clampTarget(){ const t=controls.target; t.x=THREE.MathUtils.clamp(t.x,-36,36); t.z=THREE.MathUtils.clamp(t.z,-118,118); t.y=THREE.MathUtils.clamp(t.y,0,8); }
+const needle=$('needle');
+function frame(now){
+  requestAnimationFrame(frame);
+  if(tween){ const k=Math.min(1,(now-tween.s)/tween.d), e=ease(k);
+    camera.position.lerpVectors(tween.p0,tween.p1,e); controls.target.lerpVectors(tween.t0,tween.t1,e);
+    if(k>=1){tween=null;controls.enabled=true;} }
+  else { controls.update(); clampTarget(); }
+  if(tween) camera.lookAt(controls.target);
+  // shift projection so the selected building isn't hidden behind the side panel
+  viewOffset+= (viewOffsetTarget-viewOffset)*.1;
+  if(Math.abs(viewOffset)>.002){ const w=innerWidth,h=innerHeight; const ph=panel.offsetHeight||0; camera.setViewOffset(w,h,isMobile?0:viewOffset*200,isMobile?viewOffset*ph*.48:0,w,h);} else camera.clearViewOffset();
+  renderer.render(scene,camera);
+  // compass
+  const az=Math.atan2(camera.position.x-controls.target.x,camera.position.z-controls.target.z);
+  needle.style.transform=`rotate(${az}rad)`;
+  // tags
+  const w=innerWidth,h=innerHeight; const camDist=camera.position.distanceTo(controls.target);
+  for(const b of DATA){ const t=tagEls.get(b.id);
+    if(!showTags&&!(selected&&selected.id===b.id)){t.classList.add('hide');continue;}
+    v3.copy(b.top).project(camera); if(v3.z>1){t.classList.add('hide');continue;}
+    t.classList.remove('hide'); t.style.transform=`translate(${(v3.x*.5+.5)*w}px,${(-v3.y*.5+.5)*h}px) translate(-50%,-100%)`; }
+  for(const s of staticLabels){ v3.copy(s.p).project(camera); const vis=v3.z<1&&camDist<380; s.el.style.display=vis&&showTags?'block':'none';
+    s.el.style.left=(v3.x*.5+.5)*w+'px'; s.el.style.top=(-v3.y*.5+.5)*h+'px'; }
+}
+// intro: drop in from high above
+{
+  const o=overviewPose(); camera.position.copy(o.p.clone().multiplyScalar(1.6).add(new THREE.Vector3(-60,90,0))); controls.target.copy(o.t); camera.lookAt(o.t);
+  requestAnimationFrame(frame);
+  setTimeout(()=>{ $('loader').classList.add('done'); flyTo(o.p,o.t,1800);
+    const m=location.hash.match(/^#b(\d+)$/); if(m) setTimeout(()=>select(+m[1],true),1900); },350);
+}
+paint();
+</script>
+</body>
+</html>

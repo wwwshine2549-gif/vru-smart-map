@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>VRU Smart Map — หุ่นจำลองดิจิทัล</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16191d; --ink2:#555b63; --ink3:#8a9097;
+  --paper:#f5f2eb; --card:#fffdf8; --line:#d9d3c6; --line2:#ebe6db;
+  --accent:#ff5a1f;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'IBM Plex Sans Thai',system-ui,sans-serif;
+  --glass:rgba(255,253,248,.86);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:var(--sans);color:var(--ink);
+  background:linear-gradient(180deg,#8fb8d6 0%,#b9d2e2 30%,#dbe5e6 52%,#e3e7e1 100%)}
+#scene{position:fixed;inset:0;display:block;touch-action:none;cursor:grab}
+#scene:active{cursor:grabbing}
+#tags{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.tag{position:absolute;left:0;top:0;pointer-events:none;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;
+  font:600 10.5px/1 var(--mono);color:var(--ink);background:var(--card);border:1px solid rgba(0,0,0,.12);
+  padding:4px 7px 4px 5px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.12);transition:opacity .3s,background .15s;will-change:transform}
+.tag::after{content:"";position:absolute;left:50%;bottom:-7px;width:1px;height:7px;background:rgba(22,25,29,.45)}
+.tag i{width:7px;height:7px;border-radius:50%;background:var(--c,#999);flex:none}
+.tag span{font:500 12px var(--sans);max-width:0;overflow:hidden;opacity:0;transition:max-width .35s,opacity .25s}
+.tag.near span{max-width:240px;opacity:1}
+.tag:hover,.tag.hot{background:var(--ink);color:#fff}
+.tag.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tag.sel i,.tag.hot i,.tag:hover i{background:#fff}
+.tag.far{opacity:.55}
+.tag.hide{display:none}
+.slabel{position:absolute;transform:translate(-50%,-50%);font:600 10px/1 var(--mono);letter-spacing:.16em;color:rgba(255,255,255,.92);
+  text-shadow:0 1px 3px rgba(0,0,0,.45);white-space:nowrap;pointer-events:none}
+
+#top{position:fixed;left:16px;top:16px;right:16px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;pointer-events:none;z-index:5}
+.left{display:flex;gap:10px;align-items:flex-start}
+.brand{pointer-events:auto;background:var(--ink);color:#fff;border-radius:7px;padding:9px 13px 9px 10px;display:flex;gap:10px;align-items:center;height:48px}
+.brand .mark{width:28px;height:28px;border:1.5px solid #fff;border-radius:4px;display:grid;place-items:center;font:600 10.5px var(--mono)}
+.brand b{font:600 13px/1.1 var(--mono);letter-spacing:.08em;display:block}
+.brand small{font-size:10.5px;opacity:.65;display:block;margin-top:3px}
+.search{pointer-events:auto;position:relative;width:300px}
+.search input{width:100%;height:48px;border:1px solid rgba(0,0,0,.1);background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:7px;padding:0 14px 0 40px;
+  font:500 14px var(--sans);color:var(--ink);outline:none}
+.search input:focus{border-color:var(--ink);background:var(--card)}
+.search>svg{z-index:1;position:absolute;left:13px;top:15px;width:18px;height:18px;stroke:var(--ink2)}
+.results{position:absolute;top:54px;left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:7px;box-shadow:0 10px 30px rgba(0,0,0,.14);display:none;max-height:340px;overflow-y:auto}
+.results.on{display:block}
+.res{display:flex;gap:10px;align-items:center;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line2);font-size:13px}
+.res:last-child{border-bottom:0}
+.res:hover,.res.act{background:var(--paper)}
+.res .n{font:600 11px var(--mono);min-width:28px;color:var(--ink2)}
+.res .z{margin-left:auto;font:500 10px var(--mono);color:var(--ink3);white-space:nowrap}
+.res.empty{color:var(--ink3);cursor:default}
+
+/* zone bar */
+.zonebar{pointer-events:auto;justify-self:center;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.1);border-radius:9px;padding:4px;position:relative;display:flex;gap:2px}
+.zbtn{border:0;background:transparent;font:600 13px var(--sans);color:var(--ink2);padding:9px 18px 12px;border-radius:6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:104px}
+.zbtn small{font:500 9.5px var(--mono);letter-spacing:.12em;opacity:.7}
+.zbtn:hover{color:var(--ink);background:rgba(0,0,0,.04)}
+.zbtn.on{background:var(--ink);color:#fff}
+.zprog{position:absolute;left:8px;right:8px;bottom:4px;height:2px;background:rgba(0,0,0,.08);border-radius:2px;overflow:hidden;pointer-events:none}
+.zprog div{height:100%;width:0;background:var(--accent)}
+.right{display:flex;gap:8px}
+.ibtn{pointer-events:auto;width:48px;height:48px;border-radius:7px;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.1);display:grid;place-items:center;cursor:pointer}
+.ibtn:hover{background:var(--card);border-color:var(--ink)}
+.ibtn svg{width:19px;height:19px;stroke:var(--ink);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* zone title */
+#zt{position:fixed;left:24px;bottom:26px;z-index:3;pointer-events:none;color:#fff;text-shadow:0 2px 14px rgba(0,0,0,.35);transition:opacity .4s}
+#zt small{font:600 11px var(--mono);letter-spacing:.2em;opacity:.9}
+#zt h2{font-size:44px;line-height:1.05;font-weight:700;letter-spacing:-.01em;margin-top:6px}
+#zt p{font-size:13.5px;margin-top:6px;opacity:.95}
+#zt.swap{animation:zin .7s cubic-bezier(.2,.8,.2,1)}
+@keyframes zin{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+#hint{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:3;pointer-events:none;color:#fff;font:500 12.5px var(--sans);text-shadow:0 1px 8px rgba(0,0,0,.4);display:flex;flex-direction:column;align-items:center;gap:6px;transition:opacity .6s}
+#hint svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;animation:bob 1.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(5px)}}
+#hint.off{opacity:0}
+
+/* minimap */
+#mini{position:fixed;right:16px;bottom:16px;z-index:4;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.1);border-radius:8px;padding:8px;cursor:pointer}
+#mini canvas{display:block;width:78px;height:270px}
+#mini b{display:block;font:600 9px var(--mono);letter-spacing:.14em;color:var(--ink2);text-align:center;margin-bottom:6px}
+
+/* panel */
+#panel{position:fixed;top:80px;right:16px;bottom:16px;width:380px;background:var(--card);border:1px solid var(--line);border-radius:10px;z-index:6;
+  box-shadow:0 24px 60px rgba(0,0,0,.2);display:flex;flex-direction:column;transform:translateX(calc(100% + 24px));transition:transform .5s cubic-bezier(.2,.8,.2,1);overflow:hidden}
+#panel.open{transform:none}
+.p-head{padding:18px 18px 14px;border-bottom:1px solid var(--line2);position:relative}
+.p-id{font:600 11px var(--mono);letter-spacing:.1em;color:var(--ink2);display:flex;gap:8px;align-items:center}
+.p-id .code{background:var(--ink);color:#fff;padding:3px 6px;border-radius:3px}
+.p-name{font-size:20px;font-weight:600;line-height:1.3;margin-top:10px;padding-right:36px}
+.p-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.pc{font:500 11px var(--sans);border-radius:3px;padding:3px 7px;background:var(--paper);border:1px solid var(--line2);display:flex;gap:5px;align-items:center}
+.pc i{width:7px;height:7px;border-radius:50%;background:var(--c)}
+.pc.warn{background:#fff4e5;border-color:#f3d7a8;color:#8a5a00}
+.close{position:absolute;right:12px;top:12px;width:34px;height:34px;border-radius:6px;border:1px solid var(--line2);background:var(--card);cursor:pointer;display:grid;place-items:center}
+.close:hover{border-color:var(--ink)}
+.close svg{width:14px;height:14px;stroke:var(--ink);stroke-width:2}
+.p-body{overflow-y:auto;padding:16px 18px 18px;flex:1}
+.photo{aspect-ratio:16/9;border-radius:6px;border:1px dashed #c9c1ad;display:grid;place-items:center;text-align:center;padding:14px;color:var(--ink2);font-size:12px;line-height:1.5;
+  background:repeating-linear-gradient(-45deg,#f7f3ea 0 8px,#f1ece0 8px 16px)}
+.photo code{font:500 10.5px var(--mono);background:#fff;border:1px solid var(--line);padding:2px 6px;border-radius:3px;display:inline-block;margin-top:6px;color:var(--ink)}
+.grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line2);border-radius:6px;margin-top:14px;overflow:hidden}
+.cell{padding:10px 12px;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.cell:nth-child(2n){border-right:0}
+.cell:nth-last-child(-n+2){border-bottom:0}
+.cell small{display:block;font:500 10px var(--mono);letter-spacing:.08em;color:var(--ink3);text-transform:uppercase}
+.cell b{display:block;font-size:14px;font-weight:600;margin-top:3px}
+.cell b em{font-style:normal;font-weight:400;font-size:11px;color:var(--ink3)}
+.sec{margin-top:16px}
+.sec h4{font:600 10.5px var(--mono);letter-spacing:.12em;color:var(--ink2);text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between}
+.todo{font-size:12.5px;color:var(--ink2);background:var(--paper);border-radius:6px;padding:10px 12px;line-height:1.55}
+.nav{display:flex;gap:6px;margin-top:16px}
+.nav button{flex:1;height:34px;border:1px solid var(--line);background:var(--card);border-radius:5px;font:500 12px var(--sans);cursor:pointer;color:var(--ink2)}
+.nav button:hover{border-color:var(--ink);color:var(--ink)}
+.p-foot{padding:12px 18px 16px;border-top:1px solid var(--line2);display:grid;grid-template-columns:1fr auto auto;gap:8px}
+.btn{height:42px;border-radius:6px;border:1px solid var(--ink);background:var(--ink);color:#fff;font:600 13px var(--sans);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 14px}
+.btn.ghost{background:var(--card);color:var(--ink)}
+.btn[disabled]{background:#e9e5dc;border-color:#e9e5dc;color:#9a958a;cursor:not-allowed}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.hint2{grid-column:1/-1;font-size:11px;color:var(--ink3)}
+
+.roomcard{background:var(--ink);color:#fff;border-radius:8px;padding:14px 16px;margin-bottom:14px;position:relative;overflow:hidden}
+.roomcard small{font:600 10px var(--mono);letter-spacing:.14em;opacity:.65}
+.roomcard b{display:block;font:600 30px/1.1 var(--mono);margin-top:4px}
+.roomcard p{font-size:12.5px;opacity:.85;margin-top:6px;line-height:1.5}
+.roomcard .fl{position:absolute;right:14px;top:14px;background:var(--accent);font:600 12px var(--mono);padding:5px 9px;border-radius:4px}
+.roomcard .sample{display:inline-block;margin-top:8px;font:500 10.5px var(--sans);background:rgba(255,255,255,.12);padding:3px 7px;border-radius:3px}
+.floors{border:1px solid var(--line2);border-radius:6px;overflow:hidden}
+.frow{display:grid;grid-template-columns:62px 1fr auto;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line2);font-size:12.5px;cursor:pointer}
+.frow:last-child{border-bottom:0}
+.frow:hover{background:var(--paper)}
+.frow.on{background:#fff1ea}
+.frow .f{font:600 11px var(--mono);color:var(--ink2)}
+.frow.on .f{color:var(--accent)}
+.frow .r{font:500 12px var(--mono)}
+.frow .nm{font-size:11px;color:var(--ink3)}
+.res .ico{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;background:var(--paper);flex:none}
+.res .ico svg{width:13px;height:13px;stroke:var(--ink2);fill:none;stroke-width:2}
+.res.room .ico{background:#fff1ea}.res.room .ico svg{stroke:var(--accent)}
+.res .sub{display:block;font-size:11px;color:var(--ink3);margin-top:1px}
+.rh{font:600 9.5px var(--mono);letter-spacing:.14em;color:var(--ink3);padding:8px 12px 4px;background:var(--paper)}
+#list{position:fixed;inset:0;background:rgba(22,25,29,.4);z-index:8;display:none;align-items:flex-start;justify-content:center;padding:70px 16px 16px}
+#list.on{display:flex}
+.list-box{background:var(--card);border-radius:10px;width:min(560px,100%);max-height:100%;overflow:auto;border:1px solid var(--line)}
+.list-box h3{position:sticky;top:0;background:var(--card);padding:16px 18px;border-bottom:1px solid var(--line2);font-size:15px;display:flex;justify-content:space-between;align-items:center;z-index:1}
+.zone-h{font:600 10.5px var(--mono);letter-spacing:.12em;color:var(--ink3);padding:14px 18px 6px}
+.li{display:flex;gap:10px;align-items:center;padding:9px 18px;cursor:pointer;font-size:13.5px}
+.li:hover{background:var(--paper)}
+.li .n{font:600 11px var(--mono);min-width:28px;color:var(--ink2)}
+.li .d{width:7px;height:7px;border-radius:50%}
+#toast{position:fixed;left:50%;top:84px;transform:translate(-50%,-10px);background:var(--ink);color:#fff;font-size:12.5px;padding:8px 14px;border-radius:5px;opacity:0;transition:all .25s;z-index:9;pointer-events:none}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;padding:5px 9px;border-radius:4px;z-index:7;opacity:0;transition:opacity .12s;white-space:nowrap}
+#tip b{font:600 10.5px var(--mono);margin-right:6px;opacity:.7}
+#loader{position:fixed;inset:0;background:#dfe6e8;display:grid;place-items:center;z-index:20;transition:opacity .7s}
+#loader.done{opacity:0;pointer-events:none}
+#loader div{font:500 12px var(--mono);letter-spacing:.14em;color:var(--ink2);text-align:center}
+#loader div::after{content:"";display:block;width:140px;height:2px;margin:12px auto 0;background:linear-gradient(90deg,var(--ink) 0 40%,transparent 40%);background-size:200% 100%;animation:ld 1s linear infinite}
+@keyframes ld{to{background-position:-200% 0}}
+body.focus #zt,body.focus #hint{opacity:0}
+
+@media (max-width:760px){
+  #top{left:10px;right:10px;top:10px;grid-template-columns:1fr auto;gap:8px}
+  .brand{height:44px}
+  .brand small{display:none}
+  .left{flex-wrap:wrap}
+  .search{flex:1 1 100%;width:auto}
+  .zonebar{grid-column:1/-1;order:4;justify-self:stretch}
+  .zbtn{flex:1;min-width:0;padding:8px 6px 11px}
+  .ibtn{width:44px;height:44px}
+  #mini{display:none}
+  #zt{left:16px;bottom:20px}
+  #zt h2{font-size:32px}
+  #hint{bottom:110px}
+  #panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:62vh;border-radius:16px 16px 0 0;transform:translateY(105%)}
+  #panel.open{transform:none}
+  #panel::before{content:"";width:40px;height:4px;border-radius:2px;background:var(--line);position:absolute;left:50%;top:7px;transform:translateX(-50%)}
+  .p-name{font-size:17px}
+  .photo{aspect-ratio:21/9}
+}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="tags"></div>
+
+<div id="top">
+  <div class="left">
+    <div class="brand"><div class="mark">VRU</div><div><b>SMART MAP</b><small>หุ่นจำลองดิจิทัล · v0.2</small></div></div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" placeholder="ค้นหาตึก หรือเลขห้อง เช่น 5301" autocomplete="off">
+      <div class="results" id="results"></div>
+    </div>
+  </div>
+  <div class="zonebar" id="zonebar">
+    <button class="zbtn on" data-z="1"><small>ZONE 01</small>หน้ามอ</button>
+    <button class="zbtn" data-z="2"><small>ZONE 02</small>กลางมอ</button>
+    <button class="zbtn" data-z="3"><small>ZONE 03</small>หลังมอ</button>
+    <div class="zprog"><div id="zprog"></div></div>
+  </div>
+  <div class="right">
+    <div class="ibtn" id="tList" title="รายการอาคาร"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></div>
+  </div>
+</div>
+
+<div id="zt"><small id="ztS">ZONE 01 / 03</small><h2 id="ztH">หน้ามหาวิทยาลัย</h2><p id="ztP"></p></div>
+<div id="hint"><span>เลื่อนเมาส์ / ปัดขึ้น เพื่อบินไปข้างหน้า · ลากเพื่อมองรอบ</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+<div id="mini"><b>แผนผัง</b><canvas id="mcv" width="156" height="540"></canvas></div>
+
+<aside id="panel" aria-live="polite">
+  <div class="p-head">
+    <div class="p-id"><span class="code" id="pCode">B00</span><span id="pZone"></span></div>
+    <div class="p-name" id="pName">—</div>
+    <div class="p-chips" id="pChips"></div>
+    <button class="close" id="pClose" aria-label="ปิด"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div class="p-body">
+    <div id="pRoom"></div>
+    <div class="photo" id="pPhoto"></div>
+    <div class="grid" id="pGrid"></div>
+    <div class="sec"><h4><span>ชั้น · ห้อง</span><span>ROOMS</span></h4><div id="pRooms"></div></div>
+    <div class="sec"><h4><span>ลิงก์ตรง (สำหรับ QR)</span><span>DEEP LINK</span></h4><div class="todo" id="pLink"></div></div>
+    <div class="nav"><button id="pPrev">← อาคารก่อนหน้า</button><button id="pNext">อาคารถัดไป →</button></div>
+  </div>
+  <div class="p-foot">
+    <button class="btn" id="pNav" disabled><svg viewBox="0 0 24 24"><path d="M12 2 4 21l8-4 8 4z"/></svg>นำทางด้วย Google Maps</button>
+    <button class="btn ghost" id="pCopy" title="คัดลอกลิงก์"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button>
+    <button class="btn ghost" id="pBack" title="กลับสู่เส้นทางบิน"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+    <div class="hint2">ปุ่มนำทางจะเปิดใช้เมื่อได้พิกัดจุดอ้างอิง 3 จุด · ลากเพื่อหมุนรอบอาคาร</div>
+  </div>
+</aside>
+
+<div id="list"><div class="list-box"><h3>อาคารทั้งหมด <button class="close" style="position:static" id="lClose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></h3><div id="listBody"></div></div></div>
+<div id="toast"></div>
+<div id="tip"></div>
+<div id="loader"><div>กำลังประกอบหุ่นจำลอง</div></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const CATS = {
+  edu:{name:'อาคารเรียน/คณะ',c:'#3b6ef5'}, service:{name:'สำนักงาน/บริการ',c:'#7a5af8'},
+  shop:{name:'อาหาร/ร้านค้า',c:'#e8930c'}, sport:{name:'กีฬา',c:'#11a37f'},
+  dorm:{name:'หอพัก/ที่พัก',c:'#e0457b'}, landmark:{name:'สัญลักษณ์/วัฒนธรรม',c:'#c0392b'},
+  school:{name:'โรงเรียนสาธิต',c:'#0aa2c0'}
+};
+/*DATA*/
+
+/* 3 zones: front / middle / back */
+const zoneOf=id=> (id<=12||(id>=30&&id<=32))?1 : id<=43?2 : 3;
+const ZONES={
+  1:{name:'หน้ามหาวิทยาลัย',short:'หน้ามอ',s:110,desc:'ถนนพหลโยธิน → อนุสาวรีย์ → อาคาร 100 ปี'},
+  2:{name:'กลางมหาวิทยาลัย',short:'กลางมอ',s:640,desc:'หอประชุม → อาคารเรียนคณะ → เรือนไทย → เลียบคลอง'},
+  3:{name:'หลังมหาวิทยาลัย',short:'หลังมอ',s:1500,desc:'หอพักนักศึกษา → สนามกีฬากลาง → บ้านพักบุคลากร'}
+};
+const STYLE={modern:[3,7,9,10,26,28,31,32,37,38,44],arch:[4,15,35,36],shop:[21,22]};
+const styleOf=id=>STYLE.modern.includes(id)?'modern':STYLE.arch.includes(id)?'arch':STYLE.shop.includes(id)?'shop':'pitched';
+const DATA = B.map(([id,name,cat,floors,rects,kind])=>{
+  const b={id,name,cat,floors,rects,kind,style:styleOf(id),zone:zoneOf(id),lat:null,lng:null};
+  const ys=rects.map(r=>r[1]+r[3]/2); b.py=ys.length?ys.reduce((a,c)=>a+c,0)/ys.length:2300; return b;});
+for(const z of [1,2,3]) ZONES[z].count=DATA.filter(b=>b.zone===z).length;
+
+/* ============ rooms ============
+   Real data comes from the Sheet: building_id | floor | room_from | room_to | room_name
+   SAMPLE below assumes code = [อาคารเรียน N][floor][2-digit room] — must be verified on site. */
+const CLASS_BLDG={31:2,19:5,20:6,17:7,27:8,43:9};
+const ROOMS={};
+for(const [id,n] of Object.entries(CLASS_BLDG)){ const b=DATA.find(d=>d.id==id); ROOMS[id]=[];
+  for(let f=1;f<=b.floors;f++) ROOMS[id].push({floor:f,from:`${n}${f}01`,to:`${n}${f}10`,name:'',sample:true}); }
+const ALIAS={19:['วิทย์','วิทยาศาสตร์','sci','ไอที','it'],17:['ครุ','ครุศาสตร์'],20:['ครุ','ครุศาสตร์'],27:['มนุษย์','มนุษยศาสตร์','สังคม'],
+  31:['วจก','วิทยาการจัดการ','บริหาร'],43:['อุตสาหกรรม','วิศวะ','ช่าง'],26:['ห้องสมุด','library','สำนักวิทยบริการ','คอม'],14:['โรงอาหาร','canteen','กินข้าว'],
+  23:['ห้องพยาบาล','พยาบาล'],21:['atm','ธนาคาร','กรุงไทย'],22:['ร้านสะดวกซื้อ','familymart'],8:['100ปี'],5:['80ปี'],13:['หอประชุม'],44:['หอใน'],28:['เรียนรวม']};
+for(const [id,n] of Object.entries(CLASS_BLDG)) (ALIAS[id]=ALIAS[id]||[]).push('ตึก'+n,'อาคาร'+n,'ตึกเรียน'+n,'อาคารเรียน'+n);
+DATA.forEach(b=>{ b.alias=(ALIAS[b.id]||[]); b.rooms=ROOMS[b.id]||[]; });
+function findRooms(v){ // v normalized
+  const code=v.replace(/^(ห้อง|room|rm)/,'').replace(/[-_.]/g,''); if(!/^[a-z]*\d{2,5}$/.test(code)) return [];
+  const out=[];
+  for(const b of DATA) for(const r of b.rooms){
+    const lo=parseInt(r.from,10), hi=parseInt(r.to,10), c=parseInt(code,10);
+    if(code.length===r.from.length&&c>=lo&&c<=hi) out.unshift({type:'room',b,floor:r.floor,room:code,r});
+    else if(code.length<r.from.length&&(r.from.startsWith(code)||r.to.startsWith(code)||(String(lo).slice(0,code.length)<=code&&String(hi).slice(0,code.length)>=code)))
+      out.push({type:'range',b,floor:r.floor,r});
+  }
+  return out.slice(0,8);
+}
+
+/* ============ renderer / scene ============ */
+const S=0.1, CX=335, CY=1250, FH=0.46;
+const X=px=>(px-CX)*S, Z=py=>(py-CY)*S;
+const canvas=document.getElementById('scene');
+const isMobile=matchMedia('(max-width:760px)').matches;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,isMobile?1.75:2));
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();
+const FOG=0xdfe6e5; scene.fog=new THREE.Fog(FOG,70,290);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.5,900);
+const controls=new OrbitControls(camera,canvas);
+controls.enabled=false; controls.enableDamping=true; controls.dampingFactor=.08; controls.maxPolarAngle=1.38; controls.minDistance=8; controls.maxDistance=90;
+
+scene.add(new THREE.HemisphereLight(0xeaf3ff,0x9a9a80,1.05));
+const sun=new THREE.DirectionalLight(0xfff1dc,2.5); sun.castShadow=true;
+sun.shadow.mapSize.set(isMobile?1536:2048,isMobile?1536:2048);
+Object.assign(sun.shadow.camera,{left:-62,right:62,top:62,bottom:-62,near:1,far:300});
+sun.shadow.bias=-0.0005; sun.shadow.normalBias=.03; sun.shadow.radius=2.5;
+scene.add(sun,sun.target);
+const SUN_OFF=new THREE.Vector3(-55,95,-30);
+
+const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.9,metalness:0,...o});
+const mat={grass:M(0x8bab63),grass2:M(0x7b9d57),field:M(0x9db36f),road:M(0x7d8084,{roughness:.95}),asph:M(0x4a4e53,{roughness:.85}),
+  line:M(0xf2f2ee),curb:M(0xcfcbc1),water:M(0x5f93ae,{roughness:.18,metalness:.15}),park:M(0x9a9d9f),
+  court:M(0xa8573f),courtIn:M(0x3f8a62),track:M(0xc06f4f),fieldG:M(0x4f9a4c),
+  white:M(0xf5f3ee),roofDark:M(0x50575f,{roughness:.75,flatShading:true}),roofLight:M(0xc9cbc7),teal:M(0x6fb0a3,{roughness:.6,flatShading:true}),
+  wood:M(0x7b4a2b),woodDark:M(0x5a321c,{flatShading:true}),terracotta:M(0xb2603d,{flatShading:true}),gold:M(0xd8b257,{roughness:.35,metalness:.4}),
+  trunk:M(0x6b5340)};
+
+/* ground */
+{ const g=new THREE.Mesh(new THREE.PlaneGeometry(1600,1600),mat.field); g.rotation.x=-Math.PI/2; g.position.y=-0.02; g.receiveShadow=true; scene.add(g);
+  const c=new THREE.Mesh(new THREE.PlaneGeometry((655-10)*S,(2410-215)*S),mat.grass); c.rotation.x=-Math.PI/2; c.position.set(X(332),0,Z(1312)); c.receiveShadow=true; scene.add(c); }
+function slab(x,y,w,h,m,top=0.02,th=0.04,rot=0){
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(w*S,th,h*S),m); mesh.position.set(X(x+w/2),top-th/2,Z(y+h/2)); mesh.rotation.y=rot; mesh.receiveShadow=true; scene.add(mesh); return mesh; }
+function poly(pts,width,m,top=0.03,th=0.05){
+  for(let i=0;i<pts.length-1;i++){ const [x1,y1]=pts[i],[x2,y2]=pts[i+1]; const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy);
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(len*S,th,width*S),m); mesh.position.set(X((x1+x2)/2),top-th/2,Z((y1+y2)/2)); mesh.rotation.y=-Math.atan2(dy,dx); mesh.receiveShadow=true; scene.add(mesh);
+    const j=new THREE.Mesh(new THREE.CylinderGeometry(width*S/2,width*S/2,th,16),m); j.position.set(X(x2),top-th/2,Z(y2)); j.receiveShadow=true; scene.add(j); } }
+// Phahonyothin road (extends to horizon)
+slab(-5000,130,10655,90,mat.asph,0.03,0.06);
+for(let x=-3000;x<3600;x+=40){ slab(x,151,22,1.6,mat.line,0.036,0.06); slab(x,196,22,1.6,mat.line,0.036,0.06); }
+slab(-5000,173,10655,3,M(0xd9b23c),0.036,0.06);
+// water
+[[250,290,293,200],[198,1160,240,86],[345,1032,50,106],[45,1175,60,32],[240,1740,62,175],[495,1680,50,150],[280,2105,300,135]].forEach(r=>slab(...r,mat.water,0.03,0.06));
+slab(198,1246,240,94,mat.grass2,0.025,0.05); slab(45,1790,145,255,mat.grass2,0.02,0.04);
+poly([[1400,600],[655,1245],[560,1330],[420,1440],[290,1545],[210,1630],[170,1720],[120,1900],[75,2130],[50,2330],[30,2700],[0,3600]],24,mat.water,0.03,0.06);
+// parking
+[[170,228,60,40],[468,395,68,95],[268,600,72,65],[440,600,72,65],[62,1050,36,95],[462,1185,140,34],[200,1535,55,65],[230,1955,110,40]].forEach(r=>{
+  slab(...r,mat.park,0.024,0.04); for(let x=r[0]+4;x<r[0]+r[2]-2;x+=7) slab(x,r[1]+2,0.8,r[3]-4,mat.line,0.028,0.04); });
+// roads
+const R=(p,w=11)=>poly(p,w,mat.road,0.035,0.05);
+R([[42,215],[42,2400]],13);
+R([[242,287],[545,287],[545,1150],[242,1150],[242,287]]);
+R([[242,495],[545,495]]); R([[242,710],[545,710]]);
+R([[370,215],[370,287]]); R([[410,215],[410,287]]); poly([[390,287],[390,370]],8,mat.curb,0.04,0.06);
+R([[172,695],[242,695]]); R([[172,695],[172,1155]]); R([[172,1155],[460,1155]]);
+R([[195,1155],[205,1600],[225,1700],[232,1940]],13);
+R([[455,1155],[468,1340],[485,1420],[560,1395],[590,1430],[590,2395]]);
+R([[480,1495],[300,1640]],8);
+R([[232,1940],[590,1940]]); R([[232,1940],[232,2395],[590,2395]]); R([[232,2100],[590,2100]]); R([[232,2245],[590,2245]]);
+R([[42,1170],[195,1170]],9);
+// courts
+[[250,722,24,28],[276,722,24,28],[250,752,24,28],[276,752,24,28],[495,1535,22,34],[521,1535,22,34],[495,1575,48,30]].forEach(r=>{slab(...r,mat.court,0.045,0.06); slab(r[0]+2,r[1]+2,r[2]-4,r[3]-4,mat.courtIn,0.05,0.06);});
+// stadium
+{ const sh=(L,W)=>{const s=new THREE.Shape(),r=W/2,h=L/2-r; s.absarc(h,0,r,-Math.PI/2,Math.PI/2,false); s.absarc(-h,0,r,Math.PI/2,Math.PI*1.5,false); return s;};
+  const mk=(L,W,m,y)=>{const g=new THREE.ExtrudeGeometry(sh(L,W),{depth:.06,bevelEnabled:false,curveSegments:28}); g.rotateX(-Math.PI/2); const o=new THREE.Mesh(g,m); o.position.set(X(410),y,Z(2015)); o.receiveShadow=true; scene.add(o);};
+  mk(27,12.5,mat.track,0.0); mk(21.5,7.4,mat.fieldG,0.012);
+  for(let i=-1;i<=1;i+=2){ const st=new THREE.Mesh(new THREE.BoxGeometry(11,1.3,1.8),mat.white); st.position.set(X(410),.65,Z(2015)+i*7.6); st.castShadow=true; scene.add(st);
+    const rf=new THREE.Mesh(new THREE.BoxGeometry(11.4,.15,2.2),mat.roofDark); rf.position.set(X(410),1.6,Z(2015)+i*7.6); rf.castShadow=true; scene.add(rf);} }
+
+/* ============ facade textures ============ */
+function facade(kind){
+  const c=document.createElement('canvas'); c.width=c.height=128; const g=c.getContext('2d');
+  if(kind==='cream'){
+    g.fillStyle='#ece5d5'; g.fillRect(0,0,128,128);
+    g.fillStyle='#f7f3ea'; g.fillRect(18,30,92,66);
+    const gr=g.createLinearGradient(0,34,0,92); gr.addColorStop(0,'#55697a'); gr.addColorStop(1,'#2c3843'); g.fillStyle=gr; g.fillRect(22,34,84,58);
+    g.fillStyle='#d8d0bf'; g.fillRect(62,34,4,58); g.fillRect(22,60,84,3);
+    g.fillStyle='rgba(255,255,255,.18)'; g.fillRect(24,36,36,10);
+    g.fillStyle='#d5ccb9'; g.fillRect(0,112,128,16); g.fillStyle='rgba(0,0,0,.08)'; g.fillRect(0,96,128,4);
+  } else if(kind==='white'){
+    g.fillStyle='#f3f3f0'; g.fillRect(0,0,128,128);
+    const gr=g.createLinearGradient(0,20,0,100); gr.addColorStop(0,'#6b8295'); gr.addColorStop(1,'#33424f'); g.fillStyle=gr; g.fillRect(8,22,112,76);
+    g.fillStyle='#e4e4e0'; g.fillRect(62,22,4,76); g.fillStyle='rgba(255,255,255,.2)'; g.fillRect(10,24,50,12);
+    g.fillStyle='#fafaf8'; g.fillRect(0,82,128,5); g.fillRect(0,104,128,24); g.fillStyle='rgba(0,0,0,.1)'; g.fillRect(0,98,128,6);
+  } else { // house
+    g.fillStyle='#efe9df'; g.fillRect(0,0,128,128); g.fillStyle='#3d4b56'; g.fillRect(34,38,60,48); g.fillStyle='#efe9df'; g.fillRect(62,38,4,48);
+  }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=renderer.capabilities.getMaxAnisotropy(); return t;
+}
+const TEX={cream:facade('cream'),white:facade('white'),house:facade('house')};
+function boxUV(g,w,d,fl,bay=1.6){ const uv=g.attributes.uv; const faces=[d,d,0,0,w,w];
+  for(let f=0;f<6;f++){ if(!faces[f]) continue; const ru=Math.max(1,Math.round(faces[f]/bay));
+    for(let v=0;v<4;v++){const i=f*4+v; uv.setXY(i,uv.getX(i)*ru,uv.getY(i)*fl);} } uv.needsUpdate=true; }
+function hipRoof(w,d,h){
+  const swap=d>w; if(swap)[w,d]=[d,w]; const a=w/2,b=d/2,r=Math.max(a-b,0);
+  const P=(x,y,z)=>swap?[z,y,x]:[x,y,z];
+  const c0=P(-a,0,-b),c1=P(a,0,-b),c2=P(a,0,b),c3=P(-a,0,b),t1=P(-r,h,0),t2=P(r,h,0);
+  let tris=[[c0,t2,c1],[c0,t1,t2],[c3,c2,t2],[c3,t2,t1],[c1,t2,c2],[c3,t1,c0]];
+  if(swap) tris=tris.map(t=>[t[0],t[2],t[1]]);
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(tris.flat(2),3)); g.computeVertexNormals(); return g;
+}
+function barrel(w,d,h){ const along=w>=d, len=along?w:d, r=(along?d:w)/2;
+  const g=new THREE.CylinderGeometry(r,r,len,22,1,false,0,Math.PI); g.rotateZ(Math.PI/2); g.scale(1,h/r,1); if(!along) g.rotateY(Math.PI/2); return g; }
+
+/* ============ buildings ============ */
+const pickables=[]; const byId=new Map();
+function makeBuilding(b){
+  const grp=new THREE.Group(); const mats=[];
+  const own=m=>{const c=m.clone(); mats.push(c); return c;};
+  const add=(mesh,cast=true)=>{mesh.castShadow=cast;mesh.receiveShadow=true;mesh.userData.b=b;grp.add(mesh);pickables.push(mesh);return mesh;};
+  const wallTex = b.style==='modern'?TEX.white : b.kind==='houses'?TEX.house : TEX.cream;
+  const wall=own(new THREE.MeshStandardMaterial({map:wallTex,roughness:.82}));
+  const flat=own(M(0xd6d6d2)); const white=own(mat.white);
+  let roofM = b.kind==='hall'?own(mat.teal) : b.kind==='thai'?own(mat.woodDark) : b.kind==='houses'?own(mat.terracotta) : b.style==='arch'?own(M(b.id===4?0x8fc3cf:0x7f878f,{roughness:.6,metalness:.2})) : own(mat.roofDark);
+  let maxH=0,minx=1e9,maxx=-1e9,minz=1e9,maxz=-1e9;
+  const ext=(cx,cz,hw,hd)=>{minx=Math.min(minx,cx-hw);maxx=Math.max(maxx,cx+hw);minz=Math.min(minz,cz-hd);maxz=Math.max(maxz,cz+hd);};
+
+  if(b.kind==='monument'){
+    const [x,y]=b.rects[0]; const cx=X(x+7),cz=Z(y+7);
+    add(new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.4,.35,32),white)).position.set(cx,.18,cz);
+    add(new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.6,.35,32),white)).position.set(cx,.5,cz);
+    add(new THREE.Mesh(new THREE.BoxGeometry(.9,1.4,.9),white)).position.set(cx,1.35,cz);
+    const st=add(new THREE.Mesh(new THREE.CapsuleGeometry(.32,.7,6,12),own(mat.gold))); st.position.set(cx,2.6,cz);
+    maxH=3.2; ext(cx,cz,2.4,2.4);
+  } else if(b.kind==='wire'){
+    const [x,y,w,h]=b.rects[0]; const H=b.floors*FH; const geo=new THREE.BoxGeometry(w*S,H,h*S);
+    const glass=own(new THREE.MeshStandardMaterial({color:0xdde9ef,transparent:true,opacity:.25,roughness:.1,depthWrite:false}));
+    const m=new THREE.Mesh(geo,glass); m.position.set(X(x+w/2),H/2,Z(y+h/2)); m.userData.b=b; grp.add(m); pickables.push(m);
+    const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0x56606a,transparent:true,opacity:.75})); e.position.copy(m.position); grp.add(e);
+    for(let i=1;i<b.floors;i++){ const f=new THREE.Mesh(new THREE.BoxGeometry(w*S,.06,h*S),M(0xbfc3c4)); f.position.set(m.position.x,i*FH,m.position.z); grp.add(f); }
+    // crane
+    const cr=new THREE.Mesh(new THREE.BoxGeometry(.3,H+3,.3),M(0xe0b43a)); cr.position.set(X(x+20),(H+3)/2,Z(y+15)); cr.castShadow=true; grp.add(cr);
+    const jib=new THREE.Mesh(new THREE.BoxGeometry(9,.25,.25),M(0xe0b43a)); jib.position.set(X(x+20)+3.5,H+3,Z(y+15)); jib.castShadow=true; grp.add(jib);
+    maxH=H; ext(X(x+w/2),Z(y+h/2),w*S/2,h*S/2);
+  } else if(b.kind==='thai'){
+    const [x,y,w,h]=b.rects[0]; const cx=X(x+w/2),cz=Z(y+h/2),W=w*S,D=h*S;
+    for(const sx of [-1,1]) for(const sz of [-1,1]) add(new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,1,6),own(mat.wood))).position.set(cx+sx*(W/2-.3),.5,cz+sz*(D/2-.3));
+    add(new THREE.Mesh(new THREE.BoxGeometry(W,.15,D),own(mat.wood))).position.set(cx,1.05,cz);
+    add(new THREE.Mesh(new THREE.BoxGeometry(W*.8,1.1,D*.7),own(mat.wood))).position.set(cx,1.65,cz);
+    const r=add(new THREE.Mesh(hipRoof(W*.95,D*.85,2.3),roofM)); r.position.set(cx,2.15,cz);
+    maxH=4.5; ext(cx,cz,W/2,D/2);
+  } else {
+    for(const rc of b.rects){
+      const [x,y,w,h,fo,rot]=rc; const fl=fo||b.floors; const W=w*S,D=h*S; const H=Math.max(fl*FH,.5);
+      const cx=X(x+w/2),cz=Z(y+h/2); const ry=rot?-rot*Math.PI/180:0;
+      const sub=new THREE.Group(); sub.position.set(cx,0,cz); sub.rotation.y=ry; grp.add(sub);
+      const put=(mesh,px,py,pz)=>{mesh.position.set(px,py,pz);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.b=b;sub.add(mesh);pickables.push(mesh);return mesh;};
+      const g=new THREE.BoxGeometry(W,H,D); boxUV(g,W,D,fl, b.kind==='houses'?1.2:1.6);
+      put(new THREE.Mesh(g,[wall,wall,flat,flat,wall,wall]),0,H/2,0);
+      let top=H;
+      if(b.kind==='hall'){
+        put(new THREE.Mesh(new THREE.BoxGeometry(W+1.6,.3,D+1.6),white),0,.15,0);
+        for(let i=0;i<9;i++) put(new THREE.Mesh(new THREE.CylinderGeometry(.14,.14,H,8),white),-W/2-.45+i*(W+.9)/8,H/2,D/2+.45);
+        put(new THREE.Mesh(hipRoof(W+1.4,D+1.4,2.2),roofM),0,H,0); top=H+2.2;
+      } else if(b.style==='pitched'||b.kind==='houses'||b.kind==='shrine'){
+        const rh=THREE.MathUtils.clamp(Math.min(W,D)*.42,.5,2.0);
+        put(new THREE.Mesh(hipRoof(W+.5,D+.5,b.kind==='shrine'?1.6:rh),b.kind==='shrine'?own(mat.gold):roofM),0,H,0); top=H+rh;
+        if(b.kind!=='houses'&&b.kind!=='shrine'&&Math.max(W,D)>4.2&&fl>=3){ // white stair-core towers like the physical model
+          const cw=Math.min(W,D)*.42, along=W>=D, off=(Math.max(W,D)/2)-cw*.6;
+          put(new THREE.Mesh(new THREE.BoxGeometry(along?cw:Math.min(W,D)*.55,H+FH*1.3,along?Math.min(W,D)*.55:cw),white), along?off:0,(H+FH*1.3)/2, along?0:off);
+        }
+        if(b.style==='pitched'&&b.kind!=='houses'&&b.kind!=='shrine'&&fl>=2){ // entrance canopy
+          put(new THREE.Mesh(new THREE.BoxGeometry(Math.min(2.2,W*.5),.12,1.1),white),0,FH*1.05,D/2+.55);
+          put(new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,FH,6),white),-Math.min(1,W*.22),FH/2,D/2+1);
+          put(new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,FH,6),white), Math.min(1,W*.22),FH/2,D/2+1);
+        }
+      } else if(b.style==='arch'){
+        const rh=Math.min(W,D)*.32; put(new THREE.Mesh(barrel(W+.3,D+.3,rh),roofM),0,H,0); top=H+rh;
+      } else { // modern flat: parapet + rooftop units
+        put(new THREE.Mesh(new THREE.BoxGeometry(W+.12,.2,D+.12),white),0,H+.1,0);
+        if(W*D>8) put(new THREE.Mesh(new THREE.BoxGeometry(Math.min(W,D)*.35,.6,Math.min(W,D)*.45),flat),W*.15,H+.4,-D*.15);
+        if(b.style==='shop'){ put(new THREE.Mesh(new THREE.BoxGeometry(W+.08,.28,D+.08),own(M(b.id===21?0x19a3df:0x2b9a52))),0,H-.25,0); }
+        top=H+.2;
+      }
+      maxH=Math.max(maxH,top);
+      const hw=(rot?Math.max(W,D):W)/2, hd=(rot?Math.max(W,D):D)/2; ext(cx,cz,hw,hd);
+    }
+  }
+  b.center=new THREE.Vector3((minx+maxx)/2,maxH/2,(minz+maxz)/2);
+  b.size=Math.max(maxx-minx,maxz-minz,maxH*1.3);
+  b.top=new THREE.Vector3(b.center.x,maxH+.5,b.center.z);
+  if(b.kind==='houses'){ b.center.set(X(410),.6,Z(2318)); b.size=30; b.top.set(X(410),2.2,Z(2262)); }
+  if(b.id===44) b.top.set(X(390),maxH+.5,Z(1745));
+  b.mats=mats; b.grp=grp; scene.add(grp); byId.set(b.id,b);
+}
+DATA.forEach(makeBuilding);
+
+/* ============ trees (instanced, trunk + crown) ============ */
+{
+  const pts=[]; let seed=7; const rnd=(a,b)=>{seed=(seed*16807)%2147483647; return a+(seed/2147483647)*(b-a);};
+  const blocked=(x,y)=>DATA.some(b=>b.rects.some(([rx,ry,rw,rh])=>x>rx-7&&x<rx+rw+7&&y>ry-7&&y<ry+rh+7));
+  const along=(p,off,step,sc=[.8,1.15])=>{for(let i=0;i<p.length-1;i++){const[x1,y1]=p[i],[x2,y2]=p[i+1];const L=Math.hypot(x2-x1,y2-y1),nx=-(y2-y1)/L,ny=(x2-x1)/L;
+    for(let t=0;t<L;t+=step){const x=x1+(x2-x1)*t/L,y=y1+(y2-y1)*t/L;[off,-off].forEach(o=>pts.push([x+nx*o+rnd(-2,2),y+ny*o+rnd(-2,2),rnd(...sc)]));}}};
+  along([[655,1245],[560,1330],[420,1440],[290,1545],[210,1630],[170,1720],[120,1900],[75,2130],[50,2330]],22,15);
+  along([[42,240],[42,2390]],12,20); along([[242,300],[242,1140]],10,24); along([[545,300],[545,1140]],10,24);
+  along([[372,1150],[548,1150]],10,20); along([[455,1155],[468,1340]],10,20); along([[232,1945],[232,2240]],10,22); along([[240,1935],[580,1935]],10,18);
+  along([[20,222],[650,222]],0,18,[.7,.9]);
+  for(let i=0;i<90;i++) pts.push([rnd(55,180),rnd(1800,2035),rnd(.9,1.7)]);
+  for(let i=0;i<40;i++) pts.push([rnd(205,430),rnd(1295,1338),rnd(.6,1.05)]);
+  // outside fields (sparse, toward horizon)
+  for(let i=0;i<420;i++){ const side=rnd(0,1)<.5; pts.push([side?rnd(-900,0):rnd(670,1600),rnd(240,2900),rnd(.9,1.8)]); }
+  for(let i=0;i<120;i++) pts.push([rnd(-900,1600),rnd(2420,3100),rnd(.9,1.8)]);
+  for(let i=0;i<160;i++) pts.push([rnd(-900,1600),rnd(-700,110),rnd(.9,1.8)]);
+  const ok=pts.filter(([x,y])=>!(x>14&&x<650&&y>222&&y<2410&&blocked(x,y)) && !(y>125&&y<225));
+  const crownG=new THREE.IcosahedronGeometry(.75,0), trunkG=new THREE.CylinderGeometry(.08,.11,.7,5);
+  const crown=new THREE.InstancedMesh(crownG,M(0xffffff,{flatShading:true,roughness:.95}),ok.length), trunk=new THREE.InstancedMesh(trunkG,mat.trunk,ok.length);
+  const d=new THREE.Object3D(), col=new THREE.Color(), pal=[0x3f6b45,0x4f7d48,0x5c8a4c,0x36603f,0x6a9150];
+  ok.forEach(([x,y,s],i)=>{
+    d.position.set(X(x),.35*s,Z(y)); d.scale.setScalar(s); d.rotation.set(0,rnd(0,6),0); d.updateMatrix(); trunk.setMatrixAt(i,d.matrix);
+    d.position.y=.95*s; d.scale.set(s,s*rnd(.95,1.3),s); d.rotation.set(rnd(0,3),rnd(0,3),0); d.updateMatrix(); crown.setMatrixAt(i,d.matrix);
+    crown.setColorAt(i,col.setHex(pal[i%pal.length]));
+  });
+  crown.castShadow=trunk.castShadow=true; scene.add(crown,trunk);
+}
+
+/* ============ tags ============ */
+const tagsEl=document.getElementById('tags'); const tagEls=new Map();
+const short=n=>n.replace(/^อาคาร/,'').replace(/\s*\(.*?\)/,m=>m.length>14?'':m).trim();
+DATA.forEach(b=>{const t=document.createElement('div');t.className='tag';t.style.setProperty('--c',CATS[b.cat].c);
+  t.innerHTML=`<i></i>${String(b.id).padStart(2,'0')}<span>${short(b.name)}</span>`;
+  t.addEventListener('click',e=>{e.stopPropagation();select(b.id);});
+  t.addEventListener('pointerenter',()=>hover(b)); t.addEventListener('pointerleave',()=>hover(null));
+  tagsEl.appendChild(t); tagEls.set(b.id,t);});
+const staticLabels=[['ถนนพหลโยธิน',600,175,.4],['คลอง',300,1540,.3],['สนามกีฬากลาง',410,2015,2.2],['ทางเข้า',390,250,.3]].map(([txt,x,y,h])=>{
+  const el=document.createElement('div');el.className='slabel';el.textContent=txt;tagsEl.appendChild(el);return {el,p:new THREE.Vector3(X(x),h,Z(y))};});
+
+/* ============ camera: drone path ============ */
+const S_MIN=110, S_MAX=1990, LOOK=280, HGT=12.5;
+const PATH=[[0,390],[500,392],[900,398],[1200,400],[1500,402],[1800,415],[2400,410]];
+const pathX=py=>{for(let i=0;i<PATH.length-1;i++){const[a,x1]=PATH[i],[b,x2]=PATH[i+1]; if(py<=b) return x1+(x2-x1)*Math.max(0,(py-a)/(b-a));} return PATH[PATH.length-1][1];};
+let sCur=S_MIN, sTarget=S_MIN, yaw=0, pitch=0, yawT=0, pitchT=0, lift=1;
+const _p=new THREE.Vector3(), _t=new THREE.Vector3();
+function tourPose(s,yw=yaw,pt=pitch,lf=lift,outP=_p,outT=_t){
+  outP.set(X(pathX(s)),HGT+lf*38,Z(s-lf*40));
+  const lx=X(pathX(s+LOOK)), lz=Z(s+LOOK); let vx=lx-outP.x, vz=lz-outP.z; const vy=1.5-outP.y;
+  const c=Math.cos(yw), sn=Math.sin(yw); const rx=vx*c+vz*sn, rz=-vx*sn+vz*c;
+  const len=Math.hypot(rx,vy,rz); outT.set(outP.x+rx,outP.y+vy+pt*len,outP.z+rz); return [outP,outT];
+}
+const lookPy=()=>sCur+LOOK;
+const zoneAt=py=>py<760?1:py<1640?2:3;
+
+let mode='tour', tween=null;
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function tweenTo(p1,t1,dur,done){ tween={p0:camera.position.clone(),t0:camera.userData.look?camera.userData.look.clone():controls.target.clone(),p1:p1.clone(),t1:t1.clone(),s:performance.now(),d:dur,done}; mode='tween'; }
+
+/* ============ interaction ============ */
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+let hovered=null, selected=null, outline=null, floorBand=null;
+const ACC=new THREE.Color(0xff5a1f), BLACK=new THREE.Color(0);
+function pick(cx,cy){ const r=canvas.getBoundingClientRect(); ndc.set((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1);
+  ray.setFromCamera(ndc,camera); const hit=ray.intersectObjects(pickables,false)[0]; return hit?hit.object.userData.b:null; }
+function paint(){
+  for(const b of DATA){ const isSel=selected&&selected.id===b.id, isHov=hovered&&hovered.id===b.id;
+    b.mats.forEach(m=>{ if(m.emissive){ m.emissive.copy(isSel||isHov?ACC:BLACK); m.emissiveIntensity=isSel?(floorBand?.02:.09):isHov?.12:0; } });
+    const t=tagEls.get(b.id); t.classList.toggle('sel',!!isSel); t.classList.toggle('hot',!!isHov&&!isSel); }
+}
+function setOutline(b){
+  if(outline){ scene.remove(outline); outline.traverse(o=>{o.geometry&&o.geometry.dispose();}); outline=null; }
+  if(!b) return; outline=new THREE.Group(); const lm=new THREE.LineBasicMaterial({color:0xff5a1f});
+  b.grp.updateMatrixWorld(true);
+  b.grp.traverse(o=>{ if(o.isMesh&&o.geometry.type==='BoxGeometry'&&o.geometry.parameters.height>.4){ const e=new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry),lm); o.matrixWorld.decompose(e.position,e.quaternion,e.scale); outline.add(e);} });
+  scene.add(outline);
+}
+const tip=document.getElementById('tip');
+function hover(b){ if(hovered===b) return; hovered=b; paint();
+  canvas.style.cursor=b?'pointer':''; }
+
+let drag=null;
+canvas.addEventListener('pointerdown',e=>{ drag={x:e.clientX,y:e.clientY,lx:e.clientX,ly:e.clientY,axis:null,type:e.pointerType,moved:0}; closeResults(); });
+addEventListener('pointermove',e=>{
+  if(!drag){ if(e.pointerType==='mouse'&&e.target===canvas){ hover(pick(e.clientX,e.clientY)); tip.style.left=e.clientX+14+'px'; tip.style.top=e.clientY+14+'px'; } return; }
+  const dx=e.clientX-drag.lx, dy=e.clientY-drag.ly; drag.lx=e.clientX; drag.ly=e.clientY; drag.moved=Math.hypot(e.clientX-drag.x,e.clientY-drag.y);
+  if(mode!=='tour') return;
+  if(drag.type==='mouse'){ yawT-=dx*.0035; pitchT=THREE.MathUtils.clamp(pitchT-dy*.0022,-.35,.3); }
+  else { if(!drag.axis&&drag.moved>8) drag.axis=Math.abs(e.clientX-drag.x)>Math.abs(e.clientY-drag.y)?'x':'y';
+    if(drag.axis==='x') yawT-=dx*.005; else if(drag.axis==='y') { sTarget-=dy*2.4; hideHint(); } }
+  yawT=THREE.MathUtils.clamp(yawT,-1.3,1.3);
+});
+addEventListener('pointerup',e=>{ if(!drag) return; const d=drag; drag=null;
+  if(d.moved<6&&e.target===canvas){ const b=pick(e.clientX,e.clientY); if(b) select(b.id); else if(mode==='focus') backToTour(); } });
+canvas.addEventListener('wheel',e=>{ if(mode!=='tour') return; e.preventDefault(); sTarget+=e.deltaY*.55; hideHint(); },{passive:false});
+const hint=document.getElementById('hint'); let hinted=false; function hideHint(){ if(!hinted){hinted=true;hint.classList.add('off');} }
+
+/* ============ panel / select ============ */
+const panel=document.getElementById('panel'); const $=id=>document.getElementById(id);
+const ORDER=DATA.map(b=>b.id); let viewOffset=0, viewOffsetTarget=0;
+function setFloor(b,floor){
+  if(floorBand){ scene.remove(floorBand); floorBand=null; }
+  document.querySelectorAll('.frow').forEach(r=>r.classList.toggle('on',+r.dataset.f===floor));
+  if(!b||!floor) return; floorBand=new THREE.Group();
+  const m=new THREE.MeshBasicMaterial({color:0xff5a1f,transparent:true,opacity:.55,depthWrite:false}), lm=new THREE.LineBasicMaterial({color:0xff5a1f});
+  for(const [x,y,w,h,fo,rot] of b.rects){ const fl=fo||b.floors; if(floor>fl) continue;
+    const g=new THREE.BoxGeometry(w*S+.18,FH*.86,h*S+.18); const mesh=new THREE.Mesh(g,m); mesh.position.set(X(x+w/2),(floor-.5)*FH,Z(y+h/2)); if(rot) mesh.rotation.y=-rot*Math.PI/180;
+    const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),lm); e.position.copy(mesh.position); e.rotation.copy(mesh.rotation); floorBand.add(mesh,e); }
+  scene.add(floorBand);
+}
+function renderRooms(b,floor){
+  const el=$('pRooms');
+  if(!b.rooms.length){ el.innerHTML='<div class="todo">ยังไม่มีข้อมูลห้อง — ทีมสำรวจกรอกในชีต <b>rooms</b> (building_id · floor · room_from · room_to · room_name)</div>'; return; }
+  const byF={}; b.rooms.forEach(r=>(byF[r.floor]=byF[r.floor]||[]).push(r));
+  el.innerHTML='<div class="floors">'+Object.keys(byF).sort((a,c)=>c-a).map(f=>`<div class="frow${+f===floor?' on':''}" data-f="${f}"><span class="f">ชั้น ${f}</span><span class="r">${byF[f].map(r=>r.from===r.to?r.from:r.from+'–'+r.to).join(', ')}</span><span class="nm">${byF[f].map(r=>r.name).filter(Boolean).join(', ')}</span></div>`).join('')+'</div>'
+    +(b.rooms.some(r=>r.sample)?'<div class="todo" style="margin-top:8px">⚠ ข้อมูลตัวอย่าง: สมมติว่าเลขห้อง = เลขอาคารเรียน + ชั้น + ลำดับห้อง ต้องยืนยันหน้างาน</div>':'');
+  el.querySelectorAll('.frow').forEach(r=>r.onclick=()=>{ const f=+r.dataset.f; setFloor(b,f); });
+}
+function select(id,fromHash,opt={}){
+  const b=byId.get(id); if(!b) return; selected=b; hover(null); paint(); setOutline(b); closeResults(); $('list').classList.remove('on');
+  $('pRoom').innerHTML = opt.room ? `<div class="roomcard"><small>ห้องที่ค้นหา</small><b>${opt.room}</b><span class="fl">ชั้น ${opt.floor}</span><p>อยู่ที่ ${b.name}<br>เข้าทางหลักของอาคาร แล้วขึ้นบันได/ลิฟต์ไปชั้น ${opt.floor}</p>${opt.sample?'<span class="sample">ข้อมูลตัวอย่าง · รอยืนยันหน้างาน</span>':''}</div>`
+    : opt.floor ? `<div class="roomcard"><small>ช่วงห้องที่ค้นหา</small><b>${opt.range}</b><span class="fl">ชั้น ${opt.floor}</span><p>${b.name}</p>${opt.sample?'<span class="sample">ข้อมูลตัวอย่าง · รอยืนยันหน้างาน</span>':''}</div>` : '';
+  renderRooms(b,opt.floor); setFloor(b,opt.floor); paint(); $('panel').querySelector('.p-body').scrollTop=0;
+  const code='B'+String(b.id).padStart(2,'0');
+  $('pCode').textContent=code; $('pZone').textContent='ZONE 0'+b.zone+' · '+ZONES[b.zone].short; $('pName').textContent=b.name;
+  $('pChips').innerHTML=`<span class="pc" style="--c:${CATS[b.cat].c}"><i></i>${CATS[b.cat].name}</span><span class="pc warn">รอตรวจสอบหน้างาน</span>`;
+  $('pPhoto').innerHTML=`<div>ยังไม่มีรูป — ทีมสำรวจ${ZONES[b.zone].short}<br><code>${code}_hero_01.jpg</code></div>`;
+  const fl=b.kind==='monument'?'—':b.kind==='houses'?'1–2':b.rects.reduce((m,r)=>Math.max(m,r[4]||b.floors),0);
+  $('pGrid').innerHTML=`<div class="cell"><small>จำนวนชั้น</small><b>${fl} <em>(ประมาณ)</em></b></div><div class="cell"><small>เวลาเปิด</small><b>— <em>รอสำรวจ</em></b></div>
+    <div class="cell"><small>ตรวจสอบล่าสุด</small><b>ยังไม่ตรวจ</b></div><div class="cell"><small>พิกัด</small><b>— <em>รอจุดอ้างอิง</em></b></div>`;
+  $('pLink').innerHTML=`ลิงก์ที่ลงท้ายด้วย <b style="font-family:var(--mono)">#b${b.id}</b> จะพากล้องมาที่อาคารนี้ทันที — ใช้ทำ QR ติดหน้าอาคาร`;
+  panel.classList.add('open'); document.body.classList.add('focus'); viewOffsetTarget=1;
+  try{ history.replaceState(null,'','#b'+b.id); }catch(e){}
+  // sync tour position so "back" returns near this building
+  sCur=sTarget=THREE.MathUtils.clamp(b.py-LOOK+40,S_MIN,S_MAX);
+  const from=camera.position.clone(); const dir=from.sub(b.center); dir.y=0; if(dir.lengthSq()<.01) dir.set(0,0,-1); dir.normalize();
+  const dist=THREE.MathUtils.clamp(b.size*1.7+12,16,62)*(isMobile?1.25:1), el=.55;
+  const pos=b.center.clone().add(new THREE.Vector3(dir.x*Math.cos(el),Math.sin(el),dir.z*Math.cos(el)).multiplyScalar(dist));
+  controls.enabled=false;
+  tweenTo(pos,b.center,1150,()=>{ mode='focus'; controls.target.copy(b.center); controls.enabled=true; });
+}
+function backToTour(){
+  if(mode==='tween'&&!selected) return;
+  selected=null; paint(); setOutline(null); setFloor(null); panel.classList.remove('open'); document.body.classList.remove('focus'); viewOffsetTarget=0; controls.enabled=false;
+  try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+  yaw=yawT=0; pitch=pitchT=0; const [p,t]=tourPose(sCur,0,0,0,new THREE.Vector3(),new THREE.Vector3());
+  tweenTo(p,t,1100,()=>{ mode='tour'; });
+}
+$('pClose').onclick=backToTour; $('pBack').onclick=backToTour;
+$('pPrev').onclick=()=>{ if(!selected) return; const i=ORDER.indexOf(selected.id); select(ORDER[(i-1+ORDER.length)%ORDER.length]); };
+$('pNext').onclick=()=>{ if(!selected) return; const i=ORDER.indexOf(selected.id); select(ORDER[(i+1)%ORDER.length]); };
+$('pCopy').onclick=async()=>{ if(!selected) return; const url=location.href.split('#')[0]+'#b'+selected.id;
+  try{await navigator.clipboard.writeText(url); toast('คัดลอกลิงก์ตรงแล้ว');}catch(e){toast('ลิงก์ตรง: #b'+selected.id);} };
+function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('on'),1800);}
+addEventListener('hashchange',()=>{const m=location.hash.match(/^#b(\d+)$/); if(m&&(!selected||selected.id!=+m[1])) select(+m[1],true);});
+
+/* ============ zones ============ */
+function goZone(z){ if(mode!=='tour') { backToTourThen(()=>{sTarget=ZONES[z].s;}); return; } sTarget=ZONES[z].s; yawT=0; pitchT=0; hideHint(); }
+function backToTourThen(fn){ backToTour(); const chk=setInterval(()=>{ if(mode==='tour'){clearInterval(chk);fn();} },60); }
+document.querySelectorAll('.zbtn').forEach(btn=>btn.onclick=()=>goZone(+btn.dataset.z));
+let curZone=0;
+function setZoneUI(z){ if(z===curZone) return; curZone=z;
+  document.querySelectorAll('.zbtn').forEach(b=>b.classList.toggle('on',+b.dataset.z===z));
+  const zt=$('zt'); zt.classList.remove('swap'); void zt.offsetWidth; zt.classList.add('swap');
+  $('ztS').textContent=`ZONE 0${z} / 03 · ${ZONES[z].count} อาคาร`; $('ztH').textContent=ZONES[z].name; $('ztP').textContent=ZONES[z].desc; }
+
+/* ============ search & list ============ */
+const q=$('q'), res=$('results'); let act=0, hits=[];
+const norm=s=>s.toLowerCase().replace(/\s+/g,'');
+const IC={room:'<svg viewBox="0 0 24 24"><path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><circle cx="15" cy="12" r="1"/></svg>',
+  bld:'<svg viewBox="0 0 24 24"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg>'};
+function doSearch(){ const v=norm(q.value); if(!v){closeResults();return;}
+  const rooms=findRooms(v);
+  const num=v.replace(/^b/,'');
+  const blds=DATA.filter(b=>String(b.id)===num||norm(b.name).includes(v)||b.alias.some(a=>norm(a).includes(v)||v.includes(norm(a))&&norm(a).length>2)||norm(CATS[b.cat].name).includes(v))
+    .sort((a,c)=>(String(c.id)===num)-(String(a.id)===num)).slice(0,6).map(b=>({type:'bld',b}));
+  hits=[...rooms,...blds]; act=0; renderRes(); }
+function renderRes(){
+  let html='', lastT='';
+  hits.forEach((h,i)=>{ const T=h.type==='bld'?'อาคาร':'ห้อง'; if(T!==lastT){ html+=`<div class="rh">${T==='ห้อง'?'ห้อง · ROOM':'อาคาร · BUILDING'}</div>`; lastT=T; }
+    const bn=`B${String(h.b.id).padStart(2,'0')} ${h.b.name}`;
+    if(h.type==='room') html+=`<div class="res room ${i===act?'act':''}" data-i="${i}"><span class="ico">${IC.room}</span><span>ห้อง <b style="font-family:var(--mono)">${h.room}</b> · ชั้น ${h.floor}<span class="sub">${bn}</span></span></div>`;
+    else if(h.type==='range') html+=`<div class="res room ${i===act?'act':''}" data-i="${i}"><span class="ico">${IC.room}</span><span><b style="font-family:var(--mono)">${h.r.from}–${h.r.to}</b> · ชั้น ${h.floor}<span class="sub">${bn}</span></span></div>`;
+    else html+=`<div class="res ${i===act?'act':''}" data-i="${i}"><span class="ico">${IC.bld}</span><span class="n">B${String(h.b.id).padStart(2,'0')}</span>${h.b.name}<span class="z">${ZONES[h.b.zone].short}</span></div>`; });
+  res.innerHTML=html||`<div class="res empty">ไม่พบ — ลองพิมพ์เลขห้อง เช่น 5301 หรือชื่อตึก เช่น ตึก 5</div>`;
+  res.classList.add('on'); res.querySelectorAll('.res[data-i]').forEach(el=>el.onclick=()=>{pickHit(hits[+el.dataset.i]);q.blur();}); }
+function pickHit(h){ if(!h) return;
+  if(h.type==='room') select(h.b.id,false,{room:h.room,floor:h.floor,sample:h.r.sample});
+  else if(h.type==='range') select(h.b.id,false,{floor:h.floor,range:h.r.from+'–'+h.r.to,sample:h.r.sample});
+  else select(h.b.id); }
+function closeResults(){res.classList.remove('on');}
+q.addEventListener('input',doSearch); q.addEventListener('focus',doSearch);
+q.addEventListener('keydown',e=>{ if(e.key==='ArrowDown'){act=Math.min(act+1,hits.length-1);renderRes();e.preventDefault();}
+  else if(e.key==='ArrowUp'){act=Math.max(act-1,0);renderRes();e.preventDefault();}
+  else if(e.key==='Enter'&&hits[act]){pickHit(hits[act]);q.blur();} else if(e.key==='Escape'){closeResults();q.blur();} });
+addEventListener('keydown',e=>{ if(e.target===q) return;
+  if(e.key==='/'){e.preventDefault();q.focus();}
+  else if(e.key==='Escape'){ $('list').classList.remove('on'); if(mode!=='tour') backToTour(); }
+  else if(['1','2','3'].includes(e.key)) goZone(+e.key);
+  else if(mode==='tour'&&(e.key==='ArrowDown'||e.key==='s'||e.key==='PageDown')){ sTarget+=140; hideHint(); }
+  else if(mode==='tour'&&(e.key==='ArrowUp'||e.key==='w'||e.key==='PageUp')){ sTarget-=140; }
+  else if(selected&&e.key==='ArrowRight') $('pNext').click(); else if(selected&&e.key==='ArrowLeft') $('pPrev').click(); });
+$('tList').onclick=()=>$('list').classList.add('on'); $('lClose').onclick=()=>$('list').classList.remove('on');
+$('list').addEventListener('click',e=>{if(e.target.id==='list')$('list').classList.remove('on');});
+$('listBody').innerHTML=[1,2,3].map(z=>`<div class="zone-h">ZONE 0${z} · ${ZONES[z].name.toUpperCase()}</div>`+DATA.filter(b=>b.zone===z).map(b=>`<div class="li" data-id="${b.id}"><span class="n">B${String(b.id).padStart(2,'0')}</span><span class="d" style="background:${CATS[b.cat].c}"></span>${b.name}</div>`).join('')).join('');
+$('listBody').querySelectorAll('.li').forEach(el=>el.onclick=()=>select(+el.dataset.id));
+
+/* ============ minimap ============ */
+const mcv=$('mcv'), mctx=mcv.getContext('2d'), MK=156/(655-10), MY=118;
+const mx=px=>(px-10)*MK, my=py=>(py-MY)*MK;
+const mBase=document.createElement('canvas'); mBase.width=156; mBase.height=540;
+{ const g=mBase.getContext('2d'); g.fillStyle='#e7e3d8'; g.fillRect(0,0,156,540); g.fillStyle='#4a4e53'; g.fillRect(0,my(130),156,90*MK);
+  g.fillStyle='#8fbad0'; [[250,290,293,200],[198,1160,240,86],[345,1032,50,106],[240,1740,62,175],[495,1680,50,150],[280,2105,300,135]].forEach(([x,y,w,h])=>g.fillRect(mx(x),my(y),w*MK,h*MK));
+  g.strokeStyle='#8fbad0'; g.lineWidth=24*MK; g.beginPath(); [[655,1245],[420,1440],[210,1630],[120,1900],[50,2330],[40,2410]].forEach(([x,y],i)=>i?g.lineTo(mx(x),my(y)):g.moveTo(mx(x),my(y))); g.stroke();
+  g.fillStyle='#c46f50'; g.beginPath(); g.ellipse(mx(410),my(2015),135*MK,62*MK,0,0,7); g.fill();
+  g.fillStyle='#8c8f93'; DATA.forEach(b=>b.rects.forEach(([x,y,w,h])=>g.fillRect(mx(x),my(y),Math.max(w*MK,1.5),Math.max(h*MK,1.5))));
+  g.setLineDash([4,3]); g.strokeStyle='rgba(22,25,29,.5)'; g.lineWidth=1; [760,1640].forEach(y=>{g.beginPath();g.moveTo(0,my(y));g.lineTo(156,my(y));g.stroke();});
+  g.setLineDash([]); g.font='600 13px IBM Plex Mono, monospace'; g.fillStyle='rgba(22,25,29,.55)'; [['01',440],['02',1200],['03',2200]].forEach(([t,y])=>g.fillText(t,4,my(y))); }
+const _d=new THREE.Vector3();
+function drawMini(){ mctx.drawImage(mBase,0,0); const px=camera.position.x/S+CX, py=camera.position.z/S+CY; camera.getWorldDirection(_d);
+  const a=Math.atan2(_d.z,_d.x), cx=mx(px), cy=my(py);
+  mctx.fillStyle='rgba(255,90,31,.28)'; mctx.beginPath(); mctx.moveTo(cx,cy); mctx.arc(cx,cy,60,a-.45,a+.45); mctx.closePath(); mctx.fill();
+  mctx.fillStyle='#ff5a1f'; mctx.strokeStyle='#fff'; mctx.lineWidth=2; mctx.beginPath(); mctx.arc(cx,cy,6,0,7); mctx.fill(); mctx.stroke(); }
+$('mini').addEventListener('click',e=>{ const r=mcv.getBoundingClientRect(); const py=(e.clientY-r.top)/r.height*540/MK+MY;
+  const go=()=>{ sTarget=THREE.MathUtils.clamp(py-LOOK,S_MIN,S_MAX); yawT=0; pitchT=0; hideHint(); };
+  mode==='tour'?go():backToTourThen(go); });
+
+/* ============ loop ============ */
+function resize(){ renderer.setSize(innerWidth,innerHeight,false); camera.aspect=innerWidth/innerHeight; camera.fov=camera.aspect<1?62:48; camera.updateProjectionMatrix(); }
+addEventListener('resize',resize); resize();
+const v3=new THREE.Vector3(); let last=performance.now(); let T0=performance.now()+300;
+function frame(now){
+  requestAnimationFrame(frame); const dt=Math.min(.05,(now-last)/1000); last=now;
+  sTarget=THREE.MathUtils.clamp(sTarget,S_MIN,S_MAX);
+  if(mode==='tour'){
+    const k=1-Math.pow(.0015,dt); sCur+=(sTarget-sCur)*k; const it=Math.min(1,(now-T0)/2400); lift=1-ease(it);
+    if(!drag&&Math.abs(sTarget-sCur)>2){ yawT*=Math.pow(.25,dt); pitchT*=Math.pow(.25,dt); }
+    yaw+=(yawT-yaw)*(1-Math.pow(.002,dt)); pitch+=(pitchT-pitch)*(1-Math.pow(.002,dt));
+    tourPose(sCur); camera.position.copy(_p); camera.lookAt(_t); camera.userData.look=_t.clone();
+  } else if(mode==='tween'){
+    const k=Math.min(1,(now-tween.s)/tween.d), e=ease(k);
+    camera.position.lerpVectors(tween.p0,tween.p1,e); const lk=new THREE.Vector3().lerpVectors(tween.t0,tween.t1,e); camera.lookAt(lk); camera.userData.look=lk;
+    if(k>=1){ const d=tween.done; tween=null; d&&d(); }
+  } else { controls.update(); camera.userData.look=controls.target.clone(); }
+  // shadows follow the view
+  const lk=camera.userData.look||_t; sun.target.position.set(lk.x,0,lk.z); sun.position.copy(sun.target.position).add(SUN_OFF); sun.target.updateMatrixWorld();
+  // keep focused building clear of the panel
+  viewOffset+=(viewOffsetTarget-viewOffset)*.1;
+  if(Math.abs(viewOffset)>.002){ const w=innerWidth,h=innerHeight; camera.setViewOffset(w,h,isMobile?0:viewOffset*190,isMobile?viewOffset*(panel.offsetHeight||0)*.45:0,w,h);} else camera.clearViewOffset();
+  renderer.render(scene,camera);
+  // zone + progress UI
+  const z=zoneAt(lookPy()); setZoneUI(z); $('zprog').style.width=((sCur-S_MIN)/(S_MAX-S_MIN)*100).toFixed(1)+'%';
+  // tags
+  const w=innerWidth,h=innerHeight;
+  for(const b of DATA){ const t=tagEls.get(b.id); v3.copy(b.top).project(camera);
+    const dist=camera.position.distanceTo(b.top); const isSel=selected&&selected.id===b.id;
+    const isHov=hovered&&hovered.id===b.id;
+    if(!(isSel||isHov)||v3.z>1){t.classList.add('hide');continue;}
+    t.classList.remove('hide'); t.classList.add('near'); t.classList.remove('far');
+    t.style.transform=`translate(${(v3.x*.5+.5)*w}px,${(-v3.y*.5+.5)*h}px) translate(-50%,calc(-100% - 6px))`; }
+  for(const s of staticLabels){ v3.copy(s.p).project(camera); const d=camera.position.distanceTo(s.p); const vis=v3.z<1&&d<110;
+    s.el.style.display=vis?'block':'none'; s.el.style.left=(v3.x*.5+.5)*w+'px'; s.el.style.top=(-v3.y*.5+.5)*h+'px'; }
+  if(!isMobile) drawMini();
+}
+paint(); requestAnimationFrame(frame);
+setTimeout(()=>{ $('loader').classList.add('done'); const m=location.hash.match(/^#b(\d+)$/); if(m) setTimeout(()=>select(+m[1],true),900); },300);
+</script>
+</body>
+</html>
