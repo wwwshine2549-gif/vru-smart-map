@@ -1,0 +1,38 @@
+[
+  {
+    "id": "B08",
+    "name": "อาคาร 100 ปี",
+    "shortName": "อาคาร 100 ปี",
+    "zone": "front",
+    "floors": 16,
+    "x": 394,
+    "y": 561.1,
+    "roomCode": "15",
+    "photo": null,
+    "description": null
+  },
+  {
+    "id": "B27",
+    "name": "อาคารคณะมนุษยศาสตร์และสังคมศาสตร์ (อาคารเรียน 8)",
+    "shortName": "คณะมนุษยศาสตร์และสังคมศาสตร์",
+    "zone": "middle",
+    "floors": 5,
+    "x": 441.1,
+    "y": 971.8,
+    "roomCode": null,
+    "photo": null,
+    "description": null
+  },
+  {
+    "id": "B46",
+    "name": "อาคารศูนย์อนุรักษ์พันธุกรรมพืช",
+    "shortName": "ศูนย์อนุรักษ์พันธุกรรมพืช",
+    "zone": "back",
+    "floors": 2,
+    "x": 276.4,
+    "y": 1517.7,
+    "roomCode": null,
+    "photo": null,
+    "description": null
+  }
+]
