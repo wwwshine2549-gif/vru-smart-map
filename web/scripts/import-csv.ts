@@ -10,12 +10,11 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
 import { readRecords, type CsvRecord } from './lib/csv.ts';
+import { loadPlan } from './lib/plan.ts';
 import type { Building, Room, RoomType, Zone } from '../src/types.ts';
 
 const WEB = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const DATA_PDF = resolve(WEB, '..', 'data_pdf.js');
 const VERIFIED = 'ตรวจแล้ว';
 const MAX_RANGE = 50;
 
@@ -68,12 +67,9 @@ const warnings: string[] = [];
 const at = (file: string, row: number) => `${basename(file)} แถว ${row}`;
 
 // ---------- ตำแหน่งจากแผนผัง (data_pdf.js ของ v0.5) ----------
-type PdfRect = [number, number, number, number, ...unknown[]];
 function loadPlanCentroids(): Map<string, { x: number; y: number }> {
-  const ctx: { B?: [number, string, string, number, PdfRect[]][] } = {};
-  vm.runInNewContext(readFileSync(DATA_PDF, 'utf8') + '\n;this.B = B;', ctx);
   const out = new Map<string, { x: number; y: number }>();
-  for (const [num, , , , rects] of ctx.B ?? []) {
+  for (const [num, , , , rects] of loadPlan().B) {
     let sx = 0, sy = 0, sa = 0;
     for (const [x, y, w, h] of rects) {
       const a = w * h;
