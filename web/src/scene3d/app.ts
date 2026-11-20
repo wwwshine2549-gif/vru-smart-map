@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import plan from '../data/plan.json';
 import { CATS, ZONE_Y, ZONES, SERVICES } from '../data/services.ts';
+import { boxInModel, listModels, loadModel } from './models.ts';
 
 const { B, MAP } = plan;
 
@@ -335,6 +336,7 @@ function paint(){
 function setOutline(b){
   if(outline){ scene.remove(outline); outline.traverse(o=>{o.geometry&&o.geometry.dispose();}); outline=null; }
   if(!b) return; outline=new THREE.Group(); const lm=new THREE.LineBasicMaterial({color:0xff5a1f});
+  if(b.model){ const M=b.model, g=boxInModel(M,M.localBox.min,M.localBox.max,new THREE.MeshBasicMaterial({visible:false}),lm); outline.add(g); scene.add(outline); return; }
   b.grp.updateMatrixWorld(true);
   b.grp.traverse(o=>{ if(o.isMesh&&o.geometry.type==='BoxGeometry'&&o.geometry.parameters.height>.4){ const e=new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry),lm); o.matrixWorld.decompose(e.position,e.quaternion,e.scale); outline.add(e);} });
   scene.add(outline);
@@ -367,6 +369,10 @@ function setFloor(b,floor){
   document.querySelectorAll('.frow').forEach(r=>r.classList.toggle('on',+r.dataset.f===floor));
   if(!b||!floor) return; floorBand=new THREE.Group();
   const m=new THREE.MeshBasicMaterial({color:0xff5a1f,transparent:true,opacity:.55,depthWrite:false}), lm=new THREE.LineBasicMaterial({color:0xff5a1f});
+  if(b.model){ // โมเดล .glb: ใช้ floors / floorHeight จาก scene.extras
+    const M=b.model; if(floor>M.floors){ floorBand=null; return; } const L=M.localBox, pad=.4/M.scale, fh=M.floorHeight;
+    floorBand.add(boxInModel(M,new THREE.Vector3(L.min.x-pad,L.min.y+(floor-1)*fh+fh*.07,L.min.z-pad),new THREE.Vector3(L.max.x+pad,L.min.y+floor*fh-fh*.07,L.max.z+pad),m,lm));
+    floorBand.visible=layers.buildings; scene.add(floorBand); return; }
   for(const [x,y,w,h,fo,rot] of b.rects){ const fl=fo||b.floors; if(floor>fl) continue;
     const g=new THREE.BoxGeometry(w*S+.18,FH*.86,h*S+.18); const mesh=new THREE.Mesh(g,m); mesh.position.set(X(x+w/2),(floor-.5)*FH,Z(y+h/2)); if(rot) mesh.rotation.y=-rot*Math.PI/180;
     const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),lm); e.position.copy(mesh.position); e.rotation.copy(mesh.rotation); floorBand.add(mesh,e); }
@@ -431,6 +437,32 @@ $('mini').addEventListener('click',e=>{ const r=mcv.getBoundingClientRect(); con
   const go=()=>{ sTarget=THREE.MathUtils.clamp(py-LOOK,S_MIN,S_MAX); yawT=0; pitchT=0; hideHint(); };
   mode==='tour'?go():backToTourThen(go); });
 
+/* ============ โมเดล .glb (ข้อตกลงโมเดล): โหลดตามระยะกล้อง ไกลไม่โหลด ============ */
+const MODEL_D=95; let modelCodes=[], lastModelCheck=0;
+listModels().then(l=>{ modelCodes=l.filter(c=>DATA.some(d=>d.code===c)); });
+function footprintOf(b){
+  if(b.rects.length===1){ const [x,y,w,h,,rot]=b.rects[0]; return {cx:X(x+w/2),cz:Z(y+h/2),w:w*S,d:h*S,rotY:rot?-rot*Math.PI/180:0}; }
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const [x,y,w,h] of b.rects){ x0=Math.min(x0,x); x1=Math.max(x1,x+w); y0=Math.min(y0,y); y1=Math.max(y1,y+h); }
+  return {cx:X((x0+x1)/2),cz:Z((y0+y1)/2),w:(x1-x0)*S,d:(y1-y0)*S,rotY:0};
+}
+function applyModel(b,M){
+  // ซ่อนอาคารที่โค้ดสร้างเอง แล้วใช้โมเดลแทน (เลือก/ไฮไลต์/แถบชั้นทำงานเหมือนเดิม)
+  for(const c of b.grp.children) c.visible=false;
+  for(let i=pickables.length-1;i>=0;i--) if(pickables[i].userData.b===b) pickables.splice(i,1);
+  M.root.traverse(o=>{ if(o.isMesh){ o.userData.b=b; pickables.push(o); } });
+  b.grp.add(M.root); b.model=M; b.mats=M.mats;
+  const c=M.box.getCenter(new THREE.Vector3()), sz=M.box.getSize(new THREE.Vector3());
+  b.center.set(c.x,sz.y/2,c.z); b.size=Math.max(sz.x,sz.z,sz.y*1.3); b.top.set(c.x,M.box.max.y+.5,c.z);
+  if(selected===b){ setOutline(b); setFloor(b,null); }
+  paint();
+}
+function checkModels(now){
+  if(!modelCodes.length||now-lastModelCheck<400) return; lastModelCheck=now;
+  for(const code of modelCodes){ const b=DATA.find(d=>d.code===code); if(b.modelState) continue;
+    if(camera.position.distanceTo(b.center)>MODEL_D) continue;
+    b.modelState='loading'; loadModel(code,footprintOf(b)).then(M=>{ b.modelState=M?'ok':'failed'; if(M) applyModel(b,M); }); }
+}
+
 /* ============ loop ============ */
 function resize(){ renderer.setSize(innerWidth,innerHeight,false); camera.aspect=innerWidth/innerHeight; camera.fov=camera.aspect<1?62:48; camera.updateProjectionMatrix(); }
 addEventListener('resize',resize); resize();
@@ -459,6 +491,7 @@ function frame(now){
   viewOffset+=(viewOffsetTarget-viewOffset)*.1;
   if(Math.abs(viewOffset)>.002){ const w=innerWidth,h=innerHeight, i=hooks.insets(); // วางอาคารกลางช่องที่ไม่ถูกแถบค้นหา/panel บัง
     camera.setViewOffset(w,h,viewOffset*i.right/2,viewOffset*(h/2-(i.top+(h-i.top-i.bottom)/2)),w,h);} else camera.clearViewOffset();
+  checkModels(now);
   renderer.render(scene,camera);
   // zone + progress UI
   const z=zoneAt(lookPy()); setZoneUI(z); $('zprog').style.width=((sCur-S_MIN)/(S_MAX-S_MIN)*100).toFixed(1)+'%';

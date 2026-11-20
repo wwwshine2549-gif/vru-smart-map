@@ -9,15 +9,21 @@
     "preview": "vite preview",
     "import": "tsx scripts/import-csv.ts",
     "typecheck": "tsc --noEmit",
-    "plan": "tsx scripts/sync-plan.ts"
+    "plan": "tsx scripts/sync-plan.ts",
+    "models:check": "tsx scripts/check-models.ts",
+    "models:test": "tsx scripts/make-test-model.ts"
   },
   "dependencies": {
     "fuse.js": "^7.5.0",
     "three": "^0.187.0"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
     "@types/node": "^26.6.6",
     "@types/three": "^0.187.0",
+    "draco3dgltf": "^1.5.9",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.8"
