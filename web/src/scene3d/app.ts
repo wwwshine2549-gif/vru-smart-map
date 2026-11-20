@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import plan from '../data/plan.json';
-import { CATS, ZONE_Y, ZONES, ALIAS, SRC, STLABEL, SERVICES, TASKS, BCODE } from '../data/services.ts';
+import { CATS, ZONE_Y, ZONES, SERVICES } from '../data/services.ts';
 
 const { B, MAP } = plan;
 
@@ -17,37 +17,9 @@ const DATA = B.map(([id,name,cat,floors,rects,kind])=>{
   b.zone=b.py<ZONE_Y[0]?1:b.py<ZONE_Y[1]?2:3; return b;});
 for(const z of [1,2,3]) ZONES[z].count=DATA.filter(b=>b.zone===z).length;
 
-/* ============ rooms ============
-   Real data comes from the Sheet: building_id | floor | room_from | room_to | room_name
-   SAMPLE below assumes code = [อาคารเรียน N][floor][2-digit room] — must be verified on site. */
-const CLASS_BLDG={31:2,19:5,20:6,17:7,27:8,43:9};
-const ROOMS={};
-for(const [id,n] of Object.entries(CLASS_BLDG)){ const b=DATA.find(d=>d.id==id); ROOMS[id]=[];
-  for(let f=1;f<=b.floors;f++) ROOMS[id].push({floor:f,from:`${n}${f}01`,to:`${n}${f}10`,name:'',sample:true}); }
-for(const [id,n] of Object.entries(CLASS_BLDG)) (ALIAS[id]=ALIAS[id]||[]).push('ตึก'+n,'อาคาร'+n,'ตึกเรียน'+n,'อาคารเรียน'+n);
-DATA.forEach(b=>{ b.alias=(ALIAS[b.id]||[]); b.rooms=ROOMS[b.id]||[]; });
-function findRooms(v){ // v normalized
-  const raw=v.replace(/^(ห้อง|room|rm)/,'');
-  const m=raw.match(/^(\d{1,2})-(\d)([0-9a-z]{1,3})$/)||raw.match(/^(15)(\d)([0-9a-z]{2,3})$/);
-  if(m&&BCODE[m[1]]){ const b=DATA.find(d=>d.id===BCODE[m[1]]); return [{type:'room',b,floor:+m[2],room:m[1]+'-'+m[2]+m[3].toUpperCase(),r:{sample:false,official:true}}]; }
-  const code=raw.replace(/[-_.]/g,''); if(!/^[a-z]*\d{2,5}$/.test(code)) return [];
-  const out=[];
-  for(const b of DATA) for(const r of b.rooms){
-    const lo=parseInt(r.from,10), hi=parseInt(r.to,10), c=parseInt(code,10);
-    if(code.length===r.from.length&&c>=lo&&c<=hi) out.unshift({type:'room',b,floor:r.floor,room:code,r});
-    else if(code.length<r.from.length&&(r.from.startsWith(code)||r.to.startsWith(code)||(String(lo).slice(0,code.length)<=code&&String(hi).slice(0,code.length)>=code)))
-      out.push({type:'range',b,floor:r.floor,r});
-  }
-  return out.slice(0,8);
-}
-
-/* ============ service directory: ย้ายไป src/data/services.ts ============ */
-function findTasks(v){
-  if(!v) return [];
-  const out=[];
-  for(const t of TASKS){ if(t.q.some(q=>{ const n=norm(q); return n.includes(v)||(v.length>=3&&v.includes(n)); })||norm(t.l).includes(v)) out.push({type:'task',b:byId.get(t.b)||DATA.find(d=>d.id===t.b),t}); }
-  return out.slice(0,6);
-}
+/* ห้องและการค้นหาย้ายไป src/catalog.ts / src/search.ts (ใช้ข้อมูลจาก Sheet แทนข้อมูลตัวอย่าง CLASS_BLDG ของ v0.5) */
+let active=true, ready=false, pending=null;
+const hooks={ pick:(code)=>{}, closed:()=>{}, insets:()=>({top:0,right:isMobile?0:380,bottom:0}) };
 
 /* ============ renderer / scene ============ */
 /* All plan coordinates are PDF points from แผนผังอาคาร (MapVRU-2016.pdf): x → east, y → south */
@@ -56,7 +28,7 @@ const X=px=>(px-CX)*S, Z=py=>(py-CY)*S;
 const canvas=document.getElementById('scene');
 const isMobile=matchMedia('(max-width:760px)').matches;
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,isMobile?1.75:2));
+renderer.setPixelRatio(Math.min(devicePixelRatio,isMobile?1.5:2)); // มือถือ 1.5 ให้ได้ ≥30fps
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.08;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -307,12 +279,12 @@ const tagsEl=document.getElementById('tags'); const tagEls=new Map();
 const short=n=>n.replace(/^อาคาร/,'').replace(/\s*\(.*?\)/,m=>m.length>14?'':m).trim();
 DATA.forEach(b=>{const t=document.createElement('div');t.className='tag';t.style.setProperty('--c',CATS[b.cat].c);
   t.innerHTML=`<i></i>${b.code.slice(1)}<span>${short(b.name)}</span>`;
-  t.addEventListener('click',e=>{e.stopPropagation();select(b.id);});
+  t.addEventListener('click',e=>{e.stopPropagation();hooks.pick(b.code);});
   t.addEventListener('pointerenter',()=>hover(b)); t.addEventListener('pointerleave',()=>hover(null));
   tagsEl.appendChild(t); tagEls.set(b.id,t);});
 const PIN_IC='<svg viewBox="0 0 24 24"><path d="M12 11v6"/><path d="M12 7h.01"/></svg>';
 const svcPins=DATA.filter(b=>SERVICES[b.id]).map(b=>{ const el=document.createElement('div'); el.className='svcpin'; el.innerHTML=PIN_IC; el.title='มีข้อมูลบริการ: '+b.name;
-  el.addEventListener('click',e=>{e.stopPropagation();select(b.id);}); el.addEventListener('pointerenter',()=>hover(b)); el.addEventListener('pointerleave',()=>hover(null));
+  el.addEventListener('click',e=>{e.stopPropagation();hooks.pick(b.code);}); el.addEventListener('pointerenter',()=>hover(b)); el.addEventListener('pointerleave',()=>hover(null));
   tagsEl.appendChild(el); return {b,el,p:new THREE.Vector3()}; });
 const staticLabels=[['ถนนพหลโยธิน',560,176,.4],['คลอง',318,1452,.3],['สนามกีฬากลาง',406,1787,2.2],['ทางเข้า',409,232,.3],['ทางออก',374,232,.3]].map(([txt,x,y,h])=>{
   const el=document.createElement('div');el.className='slabel';el.textContent=txt;tagsEl.appendChild(el);return {el,p:new THREE.Vector3(X(x),h,Z(y))};});
@@ -360,7 +332,7 @@ function hover(b){ if(hovered===b) return; hovered=b; paint();
   canvas.style.cursor=b?'pointer':''; }
 
 let drag=null;
-canvas.addEventListener('pointerdown',e=>{ drag={x:e.clientX,y:e.clientY,lx:e.clientX,ly:e.clientY,axis:null,type:e.pointerType,moved:0}; closeResults(); });
+canvas.addEventListener('pointerdown',e=>{ drag={x:e.clientX,y:e.clientY,lx:e.clientX,ly:e.clientY,axis:null,type:e.pointerType,moved:0}; });
 addEventListener('pointermove',e=>{
   if(!drag){ if(e.pointerType==='mouse'&&e.target===canvas){ hover(pick(e.clientX,e.clientY)); tip.style.left=e.clientX+14+'px'; tip.style.top=e.clientY+14+'px'; } return; }
   const dx=e.clientX-drag.lx, dy=e.clientY-drag.ly; drag.lx=e.clientX; drag.ly=e.clientY; drag.moved=Math.hypot(e.clientX-drag.x,e.clientY-drag.y);
@@ -371,7 +343,7 @@ addEventListener('pointermove',e=>{
   yawT=THREE.MathUtils.clamp(yawT,-1.3,1.3);
 });
 addEventListener('pointerup',e=>{ if(!drag) return; const d=drag; drag=null;
-  if(d.moved<6&&e.target===canvas){ const b=pick(e.clientX,e.clientY); if(b) select(b.id); else if(mode==='focus') backToTour(); } });
+  if(d.moved<6&&e.target===canvas){ const b=pick(e.clientX,e.clientY); if(b) hooks.pick(b.code); else if(mode==='focus') backToTour(); } });
 canvas.addEventListener('wheel',e=>{ if(mode!=='tour') return; e.preventDefault(); sTarget+=e.deltaY*.55; hideHint(); },{passive:false});
 const hint=document.getElementById('hint'); let hinted=false; function hideHint(){ if(!hinted){hinted=true;hint.classList.add('off');} }
 
@@ -388,60 +360,10 @@ function setFloor(b,floor){
     const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),lm); e.position.copy(mesh.position); e.rotation.copy(mesh.rotation); floorBand.add(mesh,e); }
   scene.add(floorBand);
 }
-function renderRooms(b,floor){
-  const el=$('pRooms');
-  if(!b.rooms.length){ el.innerHTML='<div class="todo">ยังไม่มีข้อมูลห้อง — ทีมสำรวจกรอกในชีต <b>rooms</b> (building_id · floor · room_from · room_to · room_name)</div>'; return; }
-  const byF={}; b.rooms.forEach(r=>(byF[r.floor]=byF[r.floor]||[]).push(r));
-  el.innerHTML='<div class="floors">'+Object.keys(byF).sort((a,c)=>c-a).map(f=>`<div class="frow${+f===floor?' on':''}" data-f="${f}"><span class="f">ชั้น ${f}</span><span class="r">${byF[f].map(r=>r.from===r.to?r.from:r.from+'–'+r.to).join(', ')}</span><span class="nm">${byF[f].map(r=>r.name).filter(Boolean).join(', ')}</span></div>`).join('')+'</div>'
-    +(b.rooms.some(r=>r.sample)?'<div class="todo" style="margin-top:8px">⚠ ข้อมูลตัวอย่าง: สมมติว่าเลขห้อง = เลขอาคารเรียน + ชั้น + ลำดับห้อง ต้องยืนยันหน้างาน</div>':'');
-  el.querySelectorAll('.frow').forEach(r=>r.onclick=()=>{ const f=+r.dataset.f; setFloor(b,f); });
-}
-const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function svcCard(u,hl){
-  return `<div class="sc${hl?' hl':''}" data-k="${u.k}"><b>${esc(u.n)}</b>`
-   +(u.hot?`<div class="hot">⏰ ${esc(u.hot)}</div>`:'')
-   +(u.t?`<div class="lbl">ทำอะไรได้</div><div class="chips">${u.t.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:'')
-   +(u.d?`<div class="lbl">เอกสาร / สิ่งที่ต้องเตรียม</div><ul class="docs">${u.d.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'')
-   +(u.tip?`<div class="tip">💡 ${esc(u.tip)}</div>`:'')
-   +(u.room?`<div class="room">ห้อง: ${esc(u.room)}</div>`:'')
-   +(u.ph?`<div class="ph">☎ ${esc(u.ph)}</div>`:'')
-   +(u.note?`<div class="note">⚠ ${esc(u.note)}</div>`:'')
-   +`<div class="src">${u.s.map(id=>`<a href="${SRC[id].u}" target="_blank" rel="noopener">${esc(SRC[id].t)} · ${esc(SRC[id].y)} ↗</a>`).join('')}<span class="st ${u.st}">${STLABEL[u.st]}</span></div></div>`;
-}
-function renderSvc(b,openF,hlKey){
-  const S=SERVICES[b.id];
-  if(!S){ $('pAbout').innerHTML=''; $('pSvc').innerHTML=''; $('pRoomsSec').style.display=''; return; }
-  $('pRoomsSec').style.display=b.rooms.length?'':'none';
-  $('pAbout').innerHTML=`<div class="about">${esc(S.about)}${S.extra?`<span class="ex">${esc(S.extra.t)} · <a href="${SRC[S.extra.s[0]].u}" target="_blank" rel="noopener">แหล่งข้อมูล ↗</a></span>`:''}</div>`;
-  const fs=Object.keys(S.floors).map(Number).sort((a,c)=>(c||-1)-(a||-1));
-  $('pSvc').innerHTML=`<div class="sec" style="margin-top:0"><h4><span>บริการในอาคาร · แยกตามชั้น</span><span>DIRECTORY</span></h4><div class="svc">`+fs.map(f=>{
-      const us=S.floors[f]; const open=(openF!==undefined&&openF!==null)?f===openF:fs.length===1;
-      return `<div class="sf${open?' open':''}" data-f="${f}"><button class="sfh"><span class="fl">${f?'ชั้น '+f:'ไม่ระบุชั้น'}</span><span class="nm">${us.map(u=>esc(u.n)).join(' · ')}</span><span class="ch">›</span></button><div class="sfb">${us.map(u=>svcCard(u,u.k===hlKey)).join('')}</div></div>`;}).join('')
-    +`</div><div class="todo" style="margin-top:8px">ข้อมูลรวบรวมจากเว็บไซต์มหาวิทยาลัย · ทีมสำรวจต้องยืนยันหน้างานและเพิ่มเอกสารที่ต้องใช้ในชีต <b>services</b></div></div>`;
-  $('pSvc').querySelectorAll('.sf').forEach(row=>row.querySelector('.sfh').onclick=()=>{
-    const f=+row.dataset.f, was=row.classList.contains('open');
-    $('pSvc').querySelectorAll('.sf').forEach(r=>r.classList.remove('open'));
-    if(!was){ row.classList.add('open'); setFloor(b,f||null); } else setFloor(b,null);
-    paint(); });
-}
-function select(id,fromHash,opt={}){
-  const b=byId.get(id); if(!b) return; selected=b; hover(null); paint(); setOutline(b); closeResults(); $('list').classList.remove('on');
-  $('pRoom').innerHTML = opt.room ? `<div class="roomcard"><small>ห้องที่ค้นหา</small><b>${opt.room}</b><span class="fl">ชั้น ${opt.floor}</span><p>อยู่ที่ ${b.name}<br>เข้าทางหลักของอาคาร แล้วขึ้นบันได/ลิฟต์ไปชั้น ${opt.floor}</p>${opt.sample?'<span class="sample">ข้อมูลตัวอย่าง · รอยืนยันหน้างาน</span>':''}${opt.official?'<span class="sample">รูปแบบเลขห้องจากเว็บไซต์มหาวิทยาลัย (15-xxx = อาคาร 100 ปี)</span>':''}</div>`
-    : opt.task ? (()=>{ const t=opt.task, u=t.u||{}; return `<div class="taskcard"><small>งานที่ค้นหา</small><b>${esc(t.l)}</b><span class="fl">${t.f?'ชั้น '+t.f:'ไม่ระบุชั้น'}</span><p>ไปที่ <strong>${esc(u.n||'')}</strong><br>${esc(b.name)}</p></div>`; })()
-    : opt.floor ? `<div class="roomcard"><small>ช่วงห้องที่ค้นหา</small><b>${opt.range}</b><span class="fl">ชั้น ${opt.floor}</span><p>${b.name}</p>${opt.sample?'<span class="sample">ข้อมูลตัวอย่าง · รอยืนยันหน้างาน</span>':''}</div>` : '';
-  renderRooms(b,opt.floor); renderSvc(b,opt.task?opt.task.f:opt.floor,opt.task?opt.task.k:null); setFloor(b,opt.floor||(opt.task&&opt.task.f)||null); paint();
-  const pb=$('panel').querySelector('.p-body'); pb.scrollTop=0;
-  if(opt.task) setTimeout(()=>{ const c=$('pSvc').querySelector('.sc.hl'); if(c) pb.scrollTo({top:c.offsetTop-pb.offsetTop-90,behavior:'smooth'}); },650);
-  const code=b.code;
-  $('pCode').textContent=code; $('pZone').textContent='ZONE 0'+b.zone+' · '+ZONES[b.zone].short; $('pName').textContent=b.name;
-  $('pChips').innerHTML=`<span class="pc" style="--c:${CATS[b.cat].c}"><i></i>${CATS[b.cat].name}</span><span class="pc warn">รอตรวจสอบหน้างาน</span>${b.note?`<span class="pc warn">${b.note}</span>`:''}`;
-  $('pPhoto').innerHTML=`<div>ยังไม่มีรูป — ทีมสำรวจ${ZONES[b.zone].short}<br><code>${code}_hero_01.jpg</code></div>`;
-  const fl=b.kind==='monument'?'—':b.kind==='houses'?'1–2':b.rects.reduce((m,r)=>Math.max(m,r[4]||b.floors),0);
-  $('pGrid').innerHTML=`<div class="cell"><small>จำนวนชั้น</small><b>${fl} <em>(ประมาณ)</em></b></div><div class="cell"><small>เวลาเปิด</small><b>— <em>รอสำรวจ</em></b></div>
-    <div class="cell"><small>ตรวจสอบล่าสุด</small><b>ยังไม่ตรวจ</b></div><div class="cell"><small>พิกัด</small><b>— <em>รอจุดอ้างอิง</em></b></div>`;
-  $('pLink').innerHTML=`ลิงก์ที่ลงท้ายด้วย <b style="font-family:var(--mono)">#b${b.id}</b> จะพากล้องมาที่อาคารนี้ทันที — ใช้ทำ QR ติดหน้าอาคาร`;
-  panel.classList.add('open'); document.body.classList.add('focus'); viewOffsetTarget=1;
-  try{ history.replaceState(null,'','#b'+b.id); }catch(e){}
+/* panel / ค้นหา / ลิงก์ตรง ย้ายไป src/panel.ts และ src/main.ts — ฉาก 3D ทำเฉพาะกล้อง ไฮไลต์ และแถบชั้น */
+function select(id,floor=null){
+  const b=byId.get(id); if(!b) return; selected=b; hover(null); setOutline(b); setFloor(b,floor||null); paint();
+  document.body.classList.add('focus'); viewOffsetTarget=1;
   // sync tour position so "back" returns near this building
   sCur=sTarget=THREE.MathUtils.clamp(b.py-LOOK+40,S_MIN,S_MAX);
   const from=camera.position.clone(); const dir=from.sub(b.center); dir.y=0; if(dir.lengthSq()<.01) dir.set(0,0,-1); dir.normalize();
@@ -452,78 +374,27 @@ function select(id,fromHash,opt={}){
 }
 function backToTour(){
   if(mode==='tween'&&!selected) return;
-  selected=null; paint(); setOutline(null); setFloor(null); panel.classList.remove('open'); document.body.classList.remove('focus'); viewOffsetTarget=0; controls.enabled=false;
-  try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+  const had=!!selected;
+  selected=null; paint(); setOutline(null); setFloor(null); viewOffsetTarget=0; controls.enabled=false;
   yaw=yawT=0; pitch=pitchT=0; const [p,t]=tourPose(sCur,0,0,0,new THREE.Vector3(),new THREE.Vector3());
   tweenTo(p,t,1100,()=>{ mode='tour'; });
+  if(had) hooks.closed();
 }
-$('pClose').onclick=backToTour; $('pBack').onclick=backToTour;
-$('pPrev').onclick=()=>{ if(!selected) return; const i=ORDER.indexOf(selected.id); select(ORDER[(i-1+ORDER.length)%ORDER.length]); };
-$('pNext').onclick=()=>{ if(!selected) return; const i=ORDER.indexOf(selected.id); select(ORDER[(i+1)%ORDER.length]); };
-$('pCopy').onclick=async()=>{ if(!selected) return; const url=location.href.split('#')[0]+'#b'+selected.id;
-  try{await navigator.clipboard.writeText(url); toast('คัดลอกลิงก์ตรงแล้ว');}catch(e){toast('ลิงก์ตรง: #b'+selected.id);} };
-function toast(t){const el=$('toast');el.textContent=t;el.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('on'),1800);}
-addEventListener('hashchange',()=>{const m=location.hash.match(/^#b(\d+)$/); if(m&&(!selected||selected.id!=+m[1])) select(+m[1],true);});
 
 /* ============ zones ============ */
 function goZone(z){ if(mode!=='tour') { backToTourThen(()=>{sTarget=ZONES[z].s;}); return; } sTarget=ZONES[z].s; yawT=0; pitchT=0; hideHint(); }
 function backToTourThen(fn){ backToTour(); const chk=setInterval(()=>{ if(mode==='tour'){clearInterval(chk);fn();} },60); }
-document.querySelectorAll('.zbtn').forEach(btn=>btn.onclick=()=>goZone(+btn.dataset.z));
 let curZone=0;
 function setZoneUI(z){ if(z===curZone) return; curZone=z;
   document.querySelectorAll('.zbtn').forEach(b=>b.classList.toggle('on',+b.dataset.z===z));
   const zt=$('zt'); zt.classList.remove('swap'); void zt.offsetWidth; zt.classList.add('swap');
   $('ztS').textContent=`ZONE 0${z} / 03 · ${ZONES[z].count} อาคาร`; $('ztH').textContent=ZONES[z].name; $('ztP').textContent=ZONES[z].desc; }
 
-/* ============ search & list ============ */
-const q=$('q'), res=$('results'); let act=0, hits=[];
-const norm=s=>s.toLowerCase().replace(/\s+/g,'');
-const IC={room:'<svg viewBox="0 0 24 24"><path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><circle cx="15" cy="12" r="1"/></svg>',
-  bld:'<svg viewBox="0 0 24 24"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg>'};
-IC.task='<svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>';
-function quickTasks(){
-  res.innerHTML=`<div class="rh">ทำเรื่องอะไร? · งานยอดฮิต</div><div class="qt">${TASKS.filter(t=>t.pop).map((t,i)=>`<button data-l="${esc(t.l)}">${esc(t.l)}</button>`).join('')}</div>`;
-  res.classList.add('on'); hits=[];
-  res.querySelectorAll('.qt button').forEach(btn=>btn.onclick=()=>{ const t=TASKS.find(x=>x.l===btn.dataset.l); q.blur(); pickHit({type:'task',b:byId.get(t.b),t}); });
-}
-function doSearch(){ const v=norm(q.value); if(!v){ if(document.activeElement===q) quickTasks(); else closeResults(); return; }
-  const tasks=findTasks(v);
-  const rooms=findRooms(v);
-  const num=v.replace(/^b0*/,'');
-  const blds=DATA.filter(b=>String(b.id)===num||b.code.toLowerCase()===v||norm(b.name).includes(v)||b.alias.some(a=>norm(a).includes(v)||v.includes(norm(a))&&norm(a).length>2)||norm(CATS[b.cat].name).includes(v))
-    .sort((a,c)=>(String(c.id)===num)-(String(a.id)===num)).slice(0,6).map(b=>({type:'bld',b}));
-  hits=[...tasks,...rooms,...blds]; act=0; renderRes(); }
-function renderRes(){
-  let html='', lastT='';
-  hits.forEach((h,i)=>{ const T=h.type==='bld'?'อาคาร':h.type==='task'?'บริการ':'ห้อง'; if(T!==lastT){ html+=`<div class="rh">${T==='ห้อง'?'ห้อง · ROOM':T==='บริการ'?'บริการ · ทำเรื่องอะไร':'อาคาร · BUILDING'}</div>`; lastT=T; }
-    const bn=`${h.b.code} ${h.b.name}`;
-    if(h.type==='task') html+=`<div class="res task ${i===act?'act':''}" data-i="${i}"><span class="ico">${IC.task}</span><span>${esc(h.t.l)}<span class="sub">${esc(h.t.u?h.t.u.n:'')} · ${h.t.f?'ชั้น '+h.t.f:'ไม่ระบุชั้น'} · ${esc(bn)}</span></span></div>`;
-    else if(h.type==='room') html+=`<div class="res room ${i===act?'act':''}" data-i="${i}"><span class="ico">${IC.room}</span><span>ห้อง <b style="font-family:var(--mono)">${h.room}</b> · ชั้น ${h.floor}<span class="sub">${bn}</span></span></div>`;
-    else if(h.type==='range') html+=`<div class="res room ${i===act?'act':''}" data-i="${i}"><span class="ico">${IC.room}</span><span><b style="font-family:var(--mono)">${h.r.from}–${h.r.to}</b> · ชั้น ${h.floor}<span class="sub">${bn}</span></span></div>`;
-    else html+=`<div class="res ${i===act?'act':''}" data-i="${i}"><span class="ico">${IC.bld}</span><span class="n">${h.b.code}</span>${h.b.name}<span class="z">${ZONES[h.b.zone].short}</span></div>`; });
-  res.innerHTML=html||`<div class="res empty">ไม่พบ — ลองพิมพ์สิ่งที่จะไปทำ เช่น จ่ายค่าเทอม, กยศ, ปริ้นงาน หรือเลขห้อง เช่น 15-409</div>`;
-  res.classList.add('on'); res.querySelectorAll('.res[data-i]').forEach(el=>el.onclick=()=>{pickHit(hits[+el.dataset.i]);q.blur();}); }
-function pickHit(h){ if(!h) return;
-  if(h.type==='task') select(h.b.id,false,{task:h.t});
-  else if(h.type==='room') select(h.b.id,false,{room:h.room,floor:h.floor,sample:h.r.sample,official:h.r.official});
-  else if(h.type==='range') select(h.b.id,false,{floor:h.floor,range:h.r.from+'–'+h.r.to,sample:h.r.sample});
-  else select(h.b.id); }
-function closeResults(){res.classList.remove('on');}
-q.addEventListener('input',doSearch); q.addEventListener('focus',doSearch);
-q.addEventListener('keydown',e=>{ if(e.key==='ArrowDown'){act=Math.min(act+1,hits.length-1);renderRes();e.preventDefault();}
-  else if(e.key==='ArrowUp'){act=Math.max(act-1,0);renderRes();e.preventDefault();}
-  else if(e.key==='Enter'&&hits[act]){pickHit(hits[act]);q.blur();} else if(e.key==='Escape'){closeResults();q.blur();} });
-addEventListener('keydown',e=>{ if(e.target===q) return;
-  if(e.key==='/'){e.preventDefault();q.focus();}
-  else if(e.key==='Escape'){ $('list').classList.remove('on'); if(mode!=='tour') backToTour(); }
-  else if(['1','2','3'].includes(e.key)) goZone(+e.key);
+/* ============ keyboard (ค้นหาและรายการอาคารย้ายไป src/main.ts) ============ */
+addEventListener('keydown',e=>{ if(!active||e.target.closest?.('input,textarea')) return;
+  if(['1','2','3'].includes(e.key)) goZone(+e.key);
   else if(mode==='tour'&&(e.key==='ArrowDown'||e.key==='s'||e.key==='PageDown')){ sTarget+=140; hideHint(); }
-  else if(mode==='tour'&&(e.key==='ArrowUp'||e.key==='w'||e.key==='PageUp')){ sTarget-=140; }
-  else if(selected&&e.key==='ArrowRight') $('pNext').click(); else if(selected&&e.key==='ArrowLeft') $('pPrev').click(); });
-$('tList').onclick=()=>$('list').classList.add('on'); $('lClose').onclick=()=>$('list').classList.remove('on');
-$('list').addEventListener('click',e=>{if(e.target.id==='list')$('list').classList.remove('on');});
-$('listBody').innerHTML=[1,2,3].map(z=>`<div class="zone-h">ZONE 0${z} · ${ZONES[z].name.toUpperCase()}</div>`+DATA.filter(b=>b.zone===z).map(b=>`<div class="li" data-id="${b.id}"><span class="n">${b.code}</span><span class="d" style="background:${CATS[b.cat].c}"></span>${b.name}</div>`).join('')).join('');
-$('listBody').querySelectorAll('.li').forEach(el=>el.onclick=()=>select(+el.dataset.id));
+  else if(mode==='tour'&&(e.key==='ArrowUp'||e.key==='w'||e.key==='PageUp')){ sTarget-=140; } });
 
 /* ============ minimap (drawn from the same plan data) ============ */
 const MX0=54, MY0=117, MW=567, MH=1989, MK=156/MW, MCH=Math.round(MH*MK);
@@ -554,6 +425,7 @@ addEventListener('resize',resize); resize();
 const v3=new THREE.Vector3(); let last=performance.now(); let T0=performance.now()+300;
 function frame(now){
   requestAnimationFrame(frame); const dt=Math.min(.05,(now-last)/1000); last=now;
+  if(!active) return; // หน้า 2D อยู่ด้านหน้า: หยุดเรนเดอร์ ประหยัดแบต
   sTarget=THREE.MathUtils.clamp(sTarget,S_MIN,S_MAX);
   if(mode==='tour'){
     const k=1-Math.pow(.0015,dt); sCur+=(sTarget-sCur)*k; const it=Math.min(1,(now-T0)/2400); lift=1-ease(it);
@@ -569,7 +441,8 @@ function frame(now){
   const lk=camera.userData.look||_t; sun.target.position.set(lk.x,0,lk.z); sun.position.copy(sun.target.position).add(SUN_OFF); sun.target.updateMatrixWorld();
   // keep focused building clear of the panel
   viewOffset+=(viewOffsetTarget-viewOffset)*.1;
-  if(Math.abs(viewOffset)>.002){ const w=innerWidth,h=innerHeight; camera.setViewOffset(w,h,isMobile?0:viewOffset*190,isMobile?viewOffset*(panel.offsetHeight||0)*.45:0,w,h);} else camera.clearViewOffset();
+  if(Math.abs(viewOffset)>.002){ const w=innerWidth,h=innerHeight, i=hooks.insets(); // วางอาคารกลางช่องที่ไม่ถูกแถบค้นหา/panel บัง
+    camera.setViewOffset(w,h,viewOffset*i.right/2,viewOffset*(h/2-(i.top+(h-i.top-i.bottom)/2)),w,h);} else camera.clearViewOffset();
   renderer.render(scene,camera);
   // zone + progress UI
   const z=zoneAt(lookPy()); setZoneUI(z); $('zprog').style.width=((sCur-S_MIN)/(S_MAX-S_MIN)*100).toFixed(1)+'%';
@@ -589,4 +462,19 @@ function frame(now){
   if(!isMobile) drawMini();
 }
 paint(); requestAnimationFrame(frame);
-setTimeout(()=>{ $('loader').classList.add('done'); const m=location.hash.match(/^#b(\d+)$/); if(m) setTimeout(()=>select(+m[1],true),900); },300);
+setTimeout(()=>{ $('loader').classList.add('done'); ready=true; if(pending){ const p=pending; pending=null; setTimeout(()=>focus(p.code,p.floor),900); } },300);
+
+/* ============ API ให้ src/main.ts เรียก ============ */
+export function setHooks(h){ Object.assign(hooks,h); }
+/** บินไปที่อาคาร (รหัส B08 / U1) และไฮไลต์ชั้น */
+export function focus(code,floor=null){
+  const b=DATA.find(d=>d.code===code); if(!b) return;
+  if(!ready){ pending={code,floor}; return; }
+  if(selected===b&&mode!=='tour'){ setFloor(b,floor||null); paint(); return; }
+  select(b.id,floor);
+}
+export function setFloorOf(code,floor){ const b=DATA.find(d=>d.code===code); if(b&&selected===b){ setFloor(b,floor||null); paint(); } }
+/** กลับสู่เส้นทางบินโดรน (ไม่เรียก hooks.closed) */
+export function clear(){ pending=null; if(!selected) return; const h=hooks.closed; hooks.closed=()=>{}; backToTour(); hooks.closed=h; }
+export { goZone };
+export function setActive(on){ active=on; if(on){ resize(); last=performance.now(); } else { hover(null); } }

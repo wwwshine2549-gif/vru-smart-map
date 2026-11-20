@@ -1,6 +1,6 @@
 import './scene3d/style.css';
 import './app.css';
-import { BLDGS, byNum, findBuilding, findRoomExact, findRooms, type Bld } from './catalog.ts';
+import { BLDGS, byCode, byNum, findBuilding, findRoomExact, findRooms, type Bld } from './catalog.ts';
 import { CATS, ZONES, type ZoneNum } from './data/services.ts';
 import { closePanel, esc, initPanel, openPanel, panelBuilding, toast, type PanelOpt } from './panel.ts';
 import { flyTo, goZone, initMap, onViewChange, setSelected, zoneAtView } from './map2d.ts';
@@ -9,20 +9,74 @@ import { popularTasks, search, type Hit } from './search.ts';
 const $ = (id: string) => document.getElementById(id)!;
 const isMobile = () => matchMedia('(max-width:760px)').matches;
 
+// ---------- มุมมอง 3D (lazy-load: three.js โหลดเมื่อกดครั้งแรกเท่านั้น) ----------
+/** API ของ scene3d/app.ts (ไฟล์นั้นยังเป็น @ts-nocheck จึงประกาศ type ไว้ที่นี่) */
+interface Scene3D {
+  setHooks(h: { pick(code: string): void; closed(): void; insets(): { top: number; right: number; bottom: number } }): void;
+  focus(code: string, floor?: number | null): void;
+  setFloorOf(code: string, floor: number | null): void;
+  clear(): void;
+  goZone(z: ZoneNum): void;
+  setActive(on: boolean): void;
+}
+let scene3d: Scene3D | null = null, loading3d: Promise<Scene3D | null> | null = null, is3d = false;
+let curFloor: number | null = null;
+
+function load3d() {
+  loading3d ??= import('./scene3d/app.ts').then((mod) => {
+    const m = mod as unknown as Scene3D;
+    m.setHooks({ pick: (code: string) => { const b = byCode.get(code); if (b) select(b); }, closed: () => deselect(true), insets: panelInsets });
+    return (scene3d = m);
+  }).catch((err) => {
+    console.error(err);
+    loading3d = null;
+    toast('โหลดหุ่นจำลอง 3D ไม่สำเร็จ ลองใหม่อีกครั้ง');
+    setView(false);
+    return null;
+  });
+  return loading3d;
+}
+async function setView(three: boolean) {
+  is3d = three;
+  document.body.classList.toggle('mode3d', three);
+  document.body.classList.toggle('mode2d', !three);
+  $('tViewT').textContent = three ? '2D' : '3D';
+  $('tView').title = $('pView').title = three ? 'แผนผัง 2D' : 'มุมมอง 3D';
+  if (!three) {
+    scene3d?.setActive(false);
+    const b = panelBuilding();
+    if (b) requestAnimationFrame(() => flyTo(b));
+    return;
+  }
+  const m = await load3d();
+  if (!m || !is3d) return;
+  m.setActive(true);
+  const b = panelBuilding();
+  if (b) m.focus(b.code, curFloor);
+}
+$('tView').onclick = () => setView(!is3d);
+$('pView').onclick = () => setView(!is3d);
+
 // ---------- เลือกอาคาร ----------
 function select(b: Bld, opt: PanelOpt = {}) {
   closeResults();
   $('list').classList.remove('on');
   setSelected(b);
   openPanel(b, opt);
+  curFloor = opt.room?.floor ?? opt.task?.f ?? opt.floor ?? null;
   setUrl(opt.room ? { r: opt.room.roomNumber } : { b: b.code });
+  if (is3d && scene3d) scene3d.focus(b.code, curFloor || null);
   // รอให้ panel วางตัวก่อน แล้วค่อยคำนวณพื้นที่ที่ไม่ถูกบัง
-  requestAnimationFrame(() => flyTo(b));
+  else requestAnimationFrame(() => flyTo(b));
 }
-function deselect() {
+/** from3d = ฉาก 3D กลับสู่เส้นทางบินเอง (ไม่ต้องสั่งกลับ) */
+function deselect(from3d = false) {
+  if (!panelBuilding()) return;
   setSelected(null);
   closePanel();
   setUrl({});
+  curFloor = null;
+  if (!from3d) scene3d?.clear();
 }
 
 // ---------- ลิงก์ตรง: ?b=B08, ?r=15-409 และ #b8 แบบเดิมของ v0.5 ----------
@@ -53,12 +107,13 @@ addEventListener('hashchange', () => {
 });
 
 initPanel({
-  onClose: deselect,
-  onFloor: () => {},
+  onClose: () => deselect(),
+  onFloor: (b, f) => { curFloor = f; scene3d?.setFloorOf(b.code, f); },
   onSelect: (b) => select(b),
 });
 
-initMap($('map2d'), $('tags2d'), { onPick: (b) => select(b), onEmpty: () => { closeResults(); } }, () => {
+/** พื้นที่ที่แถบค้นหาและ panel บังอยู่ (px) — ใช้วางอาคารที่เลือกให้อยู่ในช่องที่มองเห็น ทั้ง 2D และ 3D */
+function panelInsets() {
   const top = $('top').getBoundingClientRect().bottom + 8;
   const open = !!panelBuilding();
   const p = $('panel');
@@ -68,17 +123,22 @@ initMap($('map2d'), $('tags2d'), { onPick: (b) => select(b), onEmpty: () => { cl
     right: open && !isMobile() ? p.offsetWidth + 24 : 0,
     bottom: open && isMobile() ? p.offsetHeight : 0,
   };
-});
+}
+initMap($('map2d'), $('tags2d'), { onPick: (b) => select(b), onEmpty: () => { closeResults(); } }, panelInsets);
 
 // ---------- โซน ----------
 let curZone = 0;
 onViewChange(() => {
+  if (is3d) return;
   const z = zoneAtView();
   if (z === curZone) return;
   curZone = z;
   document.querySelectorAll<HTMLElement>('.zbtn').forEach((b) => b.classList.toggle('on', Number(b.dataset.z) === z));
 });
-document.querySelectorAll<HTMLElement>('.zbtn').forEach((btn) => (btn.onclick = () => goZone(Number(btn.dataset.z) as ZoneNum)));
+document.querySelectorAll<HTMLElement>('.zbtn').forEach((btn) => (btn.onclick = () => {
+  const z = Number(btn.dataset.z) as ZoneNum;
+  if (is3d && scene3d) scene3d.goZone(z); else goZone(z);
+}));
 
 // ---------- ค้นหา ----------
 const q = $('q') as HTMLInputElement, res = $('results');

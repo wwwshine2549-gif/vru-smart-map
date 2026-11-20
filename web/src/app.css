@@ -15,8 +15,16 @@
 .photo img{width:100%;height:100%;object-fit:cover;border-radius:5px;display:block}
 .photo:has(img){padding:0;border-style:solid}
 
-/* ---------- แผนผัง 2D ---------- */
+/* ---------- สลับ 2D / 3D ---------- */
 body.mode2d{background:#e9e5da}
+body.mode2d #v3d,body.mode2d .zprog{display:none}
+body.mode3d #map2d,body.mode3d #tags2d{display:none}
+.vbtn span{font:600 13px var(--mono);letter-spacing:.04em}
+body.mode3d .vbtn{background:var(--ink)}
+body.mode3d .vbtn span{color:#fff}
+#pView svg{fill:none}
+
+/* ---------- แผนผัง 2D ---------- */
 #map2d{position:fixed;inset:0;touch-action:none;overflow:hidden}
 #svg2d{display:block;width:100%;height:100%;cursor:grab;user-select:none;-webkit-user-select:none}
 #svg2d:active{cursor:grabbing}
@@ -52,5 +60,6 @@ body.mode2d{background:#e9e5da}
 @media (max-width:760px){
   /* แผงชั้นข้อมูล/ปุ่มลอยไม่ชนกับ bottom sheet */
   #panel{max-height:58vh}
+  body.mode3d #panel{max-height:46vh}
   body.focus .fab{display:none}
 }

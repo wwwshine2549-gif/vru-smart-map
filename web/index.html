@@ -14,6 +14,17 @@
 <div id="map2d"></div>
 <div id="tags2d"></div>
 
+<!-- ฉาก 3D: โหลด three.js เมื่อกด "มุมมอง 3D" เท่านั้น -->
+<div id="v3d">
+  <canvas id="scene"></canvas>
+  <div id="tags"></div>
+  <div id="zt"><small id="ztS">ZONE 01 / 03</small><h2 id="ztH">หน้ามหาวิทยาลัย</h2><p id="ztP"></p></div>
+  <div id="hint"><span>เลื่อนเมาส์ / ปัดขึ้น เพื่อบินไปข้างหน้า · ลากเพื่อมองรอบ</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+  <div id="mini"><b>แผนผัง</b><canvas id="mcv" width="156" height="548"></canvas></div>
+  <div id="tip"></div>
+  <div id="loader"><div>กำลังประกอบหุ่นจำลอง</div></div>
+</div>
+
 <div id="top">
   <div class="left">
     <div class="brand"><div class="mark">VRU</div><div><b>SMART MAP</b><small>แผนที่ค้นหาอาคาร · v0.6</small></div></div>
@@ -27,8 +38,10 @@
     <button class="zbtn on" data-z="1"><small>ZONE 01</small>หน้ามอ</button>
     <button class="zbtn" data-z="2"><small>ZONE 02</small>กลางมอ</button>
     <button class="zbtn" data-z="3"><small>ZONE 03</small>หลังมอ</button>
+    <div class="zprog"><div id="zprog"></div></div>
   </div>
   <div class="right">
+    <button class="ibtn vbtn" id="tView" title="มุมมอง 3D" aria-label="สลับมุมมอง 2D / 3D"><span id="tViewT">3D</span></button>
     <button class="ibtn" id="tList" title="รายการอาคาร" aria-label="รายการอาคาร"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></button>
   </div>
 </div>
@@ -53,6 +66,7 @@
   <div class="p-foot">
     <button class="btn" id="pNav" disabled><svg viewBox="0 0 24 24"><path d="M12 2 4 21l8-4 8 4z"/></svg>นำทางด้วย Google Maps</button>
     <button class="btn ghost" id="pCopy" title="คัดลอกลิงก์" aria-label="คัดลอกลิงก์"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button>
+    <button class="btn ghost" id="pView" title="ดูใน 3D" aria-label="สลับมุมมอง 2D / 3D"><svg viewBox="0 0 24 24"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg></button>
     <div class="hint2">ปุ่มนำทางจะเปิดใช้เมื่อได้พิกัดจุดอ้างอิงครบ</div>
   </div>
 </aside>
