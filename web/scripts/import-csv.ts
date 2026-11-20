@@ -1,7 +1,9 @@
 /**
- * แปลง CSV ที่ export จากแท็บ "อาคาร" และ "ห้อง" ของ Google Sheet → src/data/buildings.json, rooms.json
+ * แปลง CSV ที่ export จากแท็บ "อาคาร", "ห้อง" และ "บริการรายชั้น" ของ Google Sheet
+ * → src/data/buildings.json, rooms.json, services.json
  *
- * ใช้:  npm run import -- [--src data/sheet] [--buildings อาคาร.csv] [--rooms ห้อง.csv] [--all] [--out src/data]
+ * ใช้:  npm run import -- [--src data/sheet] [--buildings อาคาร.csv] [--rooms ห้อง.csv]
+ *                        [--services บริการรายชั้น.csv] [--all] [--out src/data]
  *   --all  รวมแถวที่ยังไม่ "ตรวจแล้ว" (ไว้ดูตัวอย่างเท่านั้น ห้ามใช้ตอน deploy)
  *
  * หัวคอลัมน์อ่านตามชื่อภาษาไทยใน Sheet (นิยามใน tools/build_sheet.py) ห้ามเปลี่ยนชื่อใน Sheet
@@ -12,7 +14,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readRecords, type CsvRecord } from './lib/csv.ts';
 import { loadPlan } from './lib/plan.ts';
-import type { Building, Room, RoomType, Zone } from '../src/types.ts';
+import type { Building, FloorService, Room, RoomType, Zone } from '../src/types.ts';
 
 const WEB = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const VERIFIED = 'ตรวจแล้ว';
@@ -27,6 +29,28 @@ const BH = {
   roomCode: 'รหัสอาคารในเลขห้อง',
   floorsWeb: 'จำนวนชั้นในเว็บ (ประมาณ)',
   floors: 'จำนวนชั้นจริง',
+  status: 'สถานะการตรวจ',
+} as const;
+/** คอลัมน์เสริมของแท็บอาคาร: ไม่บังคับ (CSV เก่าที่ไม่มีคอลัมน์นี้ยัง import ได้) */
+const BH_OPT = {
+  lift: 'ลิฟต์',
+  ramp: 'ทางลาด',
+  wc: 'ห้องน้ำผู้พิการ (ชั้น)',
+  hours: 'เวลาเปิด–ปิด',
+} as const;
+const SH = {
+  bid: 'รหัสอาคาร',
+  floor: 'ชั้น',
+  unit: 'หน่วยงาน / ห้อง',
+  room: 'เลขห้อง',
+  tasks: 'ทำอะไรได้บ้าง (คั่นด้วย ;)',
+  docs: 'เอกสารที่ต้องเตรียม (คั่นด้วย ;)',
+  hours: 'เวลาทำการ',
+  queue: 'ช่วงที่คิวยาว',
+  online: 'ทำออนไลน์ได้ไหม / ช่องทาง',
+  phone: 'เบอร์โทร / LINE / เพจของหน่วยงาน',
+  tip: 'ข้อควรรู้',
+  verify: 'ผลเทียบของจริง',
   status: 'สถานะการตรวจ',
 } as const;
 const RH = {
@@ -59,6 +83,7 @@ const includeAll = process.argv.includes('--all');
 const srcDir = resolve(WEB, arg('src', 'data/sheet'));
 const bFile = join(srcDir, arg('buildings', 'อาคาร.csv'));
 const rFile = join(srcDir, arg('rooms', 'ห้อง.csv'));
+const sFile = join(srcDir, arg('services', 'บริการรายชั้น.csv'));
 const outDir = resolve(WEB, arg('out', 'src/data'));
 
 // ---------- รายงาน ----------
@@ -131,6 +156,17 @@ function toInt(s: string): number | null {
   return /^\d+$/.test(s) ? Number(s) : null;
 }
 
+/** "มี" / "ไม่มี" / ว่าง → true / false / null */
+function yesNo(s: string, where: string, header: string): boolean | null {
+  if (!s) return null;
+  if (s === 'มี') return true;
+  if (s === 'ไม่มี') return false;
+  warnings.push(`${where}: ${header} "${s}" ไม่ใช่ มี/ไม่มี ข้ามค่านี้`);
+  return null;
+}
+
+const splitList = (s: string) => s.split(/\s*;\s*/).map((x) => x.trim()).filter(Boolean);
+
 // ---------- อาคาร ----------
 const plan = loadPlanCentroids();
 const buildings: Building[] = [];
@@ -177,6 +213,11 @@ for (const r of load(bFile, Object.values(BH))) {
       roomCode: r.get(BH.roomCode) || null,
       photo: existsSync(join(WEB, 'public', photoRel)) ? photoRel : null,
       description: null,
+      lift: yesNo(r.get(BH_OPT.lift), where, BH_OPT.lift),
+      ramp: yesNo(r.get(BH_OPT.ramp), where, BH_OPT.ramp),
+      accessibleWc: r.get(BH_OPT.wc) || null,
+      hours: r.get(BH_OPT.hours) || null,
+      verified: r.get(BH.status) === VERIFIED,
     });
   }
 }
@@ -240,7 +281,48 @@ for (const r of load(rFile, Object.values(RH))) {
     }
     roomRow.set(key, r.sheetRow);
     numberOwner.set(roomNumber, bid);
-    rooms.push({ id: key, roomNumber, buildingId: bid, floor, type, note: r.get(RH.name) || null });
+    rooms.push({ id: key, roomNumber, buildingId: bid, floor, type, note: r.get(RH.name) || null, verified: r.get(RH.status) === VERIFIED });
+  }
+}
+
+// ---------- บริการรายชั้น (ไม่บังคับ: ถ้าไม่มีไฟล์ เว็บใช้ข้อมูลจากเว็บไซต์มหาวิทยาลัยที่ติดป้าย "รอตรวจสอบ") ----------
+const services: FloorService[] = [];
+if (!existsSync(sFile)) {
+  warnings.push(`ไม่พบ ${basename(sFile)} — เว็บจะแสดงบริการจากเว็บไซต์มหาวิทยาลัย (รอตรวจสอบ) แทน`);
+} else {
+  for (const r of load(sFile, Object.values(SH))) {
+    if (!usable(r, SH.bid, SH.status)) continue;
+    const where = at(sFile, r.sheetRow);
+    const bid = r.get(SH.bid);
+    const b = byId.get(bid);
+    if (!b) {
+      warnings.push(`${where}: รหัสอาคาร "${bid}" ยังไม่มีในแท็บอาคารที่ตรวจแล้ว ข้ามแถวนี้`);
+      continue;
+    }
+    if (r.get(SH.verify) === 'ไม่พบที่หน้างาน') continue;
+    const fText = r.get(SH.floor);
+    const floor = fText === '' || fText === 'ไม่ระบุ' ? null : toInt(fText);
+    if (floor === null && fText !== '' && fText !== 'ไม่ระบุ') {
+      errors.push(`${where}: ชั้น "${fText}" ไม่ใช่ตัวเลขหรือ "ไม่ระบุ"`);
+      continue;
+    }
+    const unit = r.get(SH.unit);
+    if (!unit) {
+      errors.push(`${where}: ไม่มีชื่อหน่วยงาน / ห้อง`);
+      continue;
+    }
+    services.push({
+      buildingId: bid, floor, unit,
+      room: r.get(SH.room) || null,
+      tasks: splitList(r.get(SH.tasks)),
+      docs: splitList(r.get(SH.docs)),
+      hours: r.get(SH.hours) || null,
+      queue: r.get(SH.queue) || null,
+      online: r.get(SH.online) || null,
+      phone: r.get(SH.phone) || null,
+      tip: r.get(SH.tip) || null,
+      verified: r.get(SH.status) === VERIFIED,
+    });
   }
 }
 
@@ -256,8 +338,9 @@ if (errors.length) {
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, 'buildings.json'), JSON.stringify(buildings, null, 2) + '\n');
 writeFileSync(join(outDir, 'rooms.json'), JSON.stringify(rooms, null, 2) + '\n');
+writeFileSync(join(outDir, 'services.json'), JSON.stringify(services, null, 2) + '\n');
 console.log(
-  `เขียน ${buildings.length} อาคาร, ${rooms.length} ห้อง → ${outDir}` +
+  `เขียน ${buildings.length} อาคาร, ${rooms.length} ห้อง, ${services.length} บริการ → ${outDir}` +
     (warnings.length ? ` (${warnings.length} คำเตือน)` : '') +
     (includeAll ? '\n⚠ ใช้ --all: รวมแถวที่ยังไม่ตรวจ ห้ามใช้ข้อมูลชุดนี้ deploy' : ''),
 );

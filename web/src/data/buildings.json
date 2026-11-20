@@ -9,7 +9,12 @@
     "y": 561.1,
     "roomCode": "15",
     "photo": null,
-    "description": null
+    "description": null,
+    "lift": true,
+    "ramp": true,
+    "accessibleWc": null,
+    "hours": null,
+    "verified": true
   },
   {
     "id": "B27",
@@ -21,7 +26,12 @@
     "y": 971.8,
     "roomCode": null,
     "photo": null,
-    "description": null
+    "description": null,
+    "lift": null,
+    "ramp": null,
+    "accessibleWc": null,
+    "hours": null,
+    "verified": true
   },
   {
     "id": "B46",
@@ -33,6 +43,11 @@
     "y": 1517.7,
     "roomCode": null,
     "photo": null,
-    "description": null
+    "description": null,
+    "lift": null,
+    "ramp": null,
+    "accessibleWc": null,
+    "hours": null,
+    "verified": true
   }
 ]

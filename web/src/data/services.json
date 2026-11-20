@@ -1,0 +1,19 @@
+[
+  {
+    "buildingId": "B08",
+    "floor": 2,
+    "unit": "สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)",
+    "room": null,
+    "tasks": [
+      "เพิ่ม–ถอนรายวิชา",
+      "ตารางเรียน"
+    ],
+    "docs": [],
+    "hours": null,
+    "queue": null,
+    "online": null,
+    "phone": null,
+    "tip": "ข้อมูลตัวอย่าง ยังไม่ได้เก็บจริง",
+    "verified": true
+  }
+]
