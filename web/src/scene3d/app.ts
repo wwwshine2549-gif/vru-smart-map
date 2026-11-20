@@ -19,6 +19,9 @@ for(const z of [1,2,3]) ZONES[z].count=DATA.filter(b=>b.zone===z).length;
 
 /* ห้องและการค้นหาย้ายไป src/catalog.ts / src/search.ts (ใช้ข้อมูลจาก Sheet แทนข้อมูลตัวอย่าง CLASS_BLDG ของ v0.5) */
 let active=true, ready=false, pending=null;
+/* ชั้นข้อมูล (แผงชั้นข้อมูลใน src/main.ts) */
+const layers={buildings:true,labels:true,zones:true,services:true,trees:true};
+const TREES=[]; let zoneGrp=null;
 const hooks={ pick:(code)=>{}, closed:()=>{}, insets:()=>({top:0,right:isMobile?0:380,bottom:0}) };
 
 /* ============ renderer / scene ============ */
@@ -271,7 +274,16 @@ DATA.forEach(makeBuilding);
     d.position.y=.95*s; d.scale.set(s,s*rnd(.95,1.3),s); d.rotation.set(rnd(0,3),rnd(0,3),0); d.updateMatrix(); crown.setMatrixAt(i,d.matrix);
     crown.setColorAt(i,col.setHex(pal[i%pal.length]));
   });
-  crown.castShadow=trunk.castShadow=true; scene.add(crown,trunk);
+  crown.castShadow=trunk.castShadow=true; scene.add(crown,trunk); TREES.push(crown,trunk);
+}
+
+/* ============ zone boundaries (ชั้นข้อมูล "โซน"): เส้นประบนพื้นที่แนวแบ่ง หน้ามอ / กลางมอ / หลังมอ ============ */
+{
+  const dash=1.1, gap=.8, x0=X(55), x1=X(620), n=Math.floor((x1-x0)/(dash+gap));
+  const im=new THREE.InstancedMesh(new THREE.BoxGeometry(dash,.03,.2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.75,depthWrite:false}),n*ZONE_Y.length);
+  const d=new THREE.Object3D(); let k=0;
+  for(const y of ZONE_Y) for(let i=0;i<n;i++){ d.position.set(x0+i*(dash+gap)+dash/2,.07,Z(y)); d.updateMatrix(); im.setMatrixAt(k++,d.matrix); }
+  zoneGrp=im; scene.add(im);
 }
 
 /* ============ tags ============ */
@@ -312,7 +324,7 @@ function tweenTo(p1,t1,dur,done){ tween={p0:camera.position.clone(),t0:camera.us
 const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
 let hovered=null, selected=null, outline=null, floorBand=null;
 const ACC=new THREE.Color(0xff5a1f), BLACK=new THREE.Color(0);
-function pick(cx,cy){ const r=canvas.getBoundingClientRect(); ndc.set((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1);
+function pick(cx,cy){ if(!layers.buildings) return null; const r=canvas.getBoundingClientRect(); ndc.set((cx-r.left)/r.width*2-1,-(cy-r.top)/r.height*2+1);
   ray.setFromCamera(ndc,camera); const hit=ray.intersectObjects(pickables,false)[0]; return hit?hit.object.userData.b:null; }
 function paint(){
   for(const b of DATA){ const isSel=selected&&selected.id===b.id, isHov=hovered&&hovered.id===b.id;
@@ -422,6 +434,10 @@ $('mini').addEventListener('click',e=>{ const r=mcv.getBoundingClientRect(); con
 /* ============ loop ============ */
 function resize(){ renderer.setSize(innerWidth,innerHeight,false); camera.aspect=innerWidth/innerHeight; camera.fov=camera.aspect<1?62:48; camera.updateProjectionMatrix(); }
 addEventListener('resize',resize); resize();
+const LABEL_D=46, tagBoxes=[];
+// ป้ายที่เลือก/ชี้ วางก่อน แล้วตามด้วยอาคารที่ใกล้กล้อง
+const TAG_ORDER=()=>[...DATA].sort((a,c)=>rank(c)-rank(a));
+const rank=b=>(selected===b?2e6:0)+(hovered===b?1e6:0)-camera.position.distanceToSquared(b.top);
 const v3=new THREE.Vector3(); let last=performance.now(); let T0=performance.now()+300;
 function frame(now){
   requestAnimationFrame(frame); const dt=Math.min(.05,(now-last)/1000); last=now;
@@ -448,16 +464,22 @@ function frame(now){
   const z=zoneAt(lookPy()); setZoneUI(z); $('zprog').style.width=((sCur-S_MIN)/(S_MAX-S_MIN)*100).toFixed(1)+'%';
   // tags
   const w=innerWidth,h=innerHeight;
-  for(const b of DATA){ const t=tagEls.get(b.id); v3.copy(b.top).project(camera);
+  tagBoxes.length=0;
+  for(const b of TAG_ORDER()){ const t=tagEls.get(b.id); v3.copy(b.top).project(camera);
     const dist=camera.position.distanceTo(b.top); const isSel=selected&&selected.id===b.id;
     const isHov=hovered&&hovered.id===b.id;
-    if(!(isSel||isHov)||v3.z>1){t.classList.add('hide');continue;}
-    t.classList.remove('hide'); t.classList.add('near'); t.classList.remove('far');
-    t.style.transform=`translate(${(v3.x*.5+.5)*w}px,${(-v3.y*.5+.5)*h}px) translate(-50%,calc(-100% - 6px))`; }
+    // ชั้นข้อมูล "ป้ายชื่อ": แสดงเลขอาคารใกล้กล้อง ซ่อนป้ายที่ทับกัน (ป้ายที่เลือก/ชี้อยู่แสดงชื่อเต็มเสมอ)
+    const lbl=layers.labels&&layers.buildings&&dist<LABEL_D;
+    if(!(isSel||isHov||lbl)||v3.z>1){t.classList.add('hide');continue;}
+    const sx=(v3.x*.5+.5)*w, sy=(-v3.y*.5+.5)*h, full=isSel||isHov, bw=full?240:34;
+    if(!full&&tagBoxes.some(o=>sx-bw/2<o[2]&&sx+bw/2>o[0]&&sy-30<o[3]&&sy-6>o[1])){t.classList.add('hide');continue;}
+    tagBoxes.push([sx-bw/2,sy-30,sx+bw/2,sy-6]);
+    t.classList.remove('hide'); t.classList.toggle('near',full); t.classList.remove('far');
+    t.style.transform=`translate(${sx}px,${sy}px) translate(-50%,calc(-100% - 6px))`; }
   for(const sp of svcPins){ const b=sp.b; sp.p.copy(b.top).y+=1.1; v3.copy(sp.p).project(camera); const d=camera.position.distanceTo(sp.p);
-    const hide=v3.z>1||d>150||(selected&&selected.id===b.id)||(hovered&&hovered.id===b.id)||(mode!=='tour'&&selected&&d>80);
+    const hide=!layers.services||v3.z>1||d>150||(selected&&selected.id===b.id)||(hovered&&hovered.id===b.id)||(mode!=='tour'&&selected&&d>80);
     sp.el.classList.toggle('hide',hide); if(!hide) sp.el.style.transform=`translate(${(v3.x*.5+.5)*w-13}px,${(-v3.y*.5+.5)*h-13}px)`; }
-  for(const s of staticLabels){ v3.copy(s.p).project(camera); const d=camera.position.distanceTo(s.p); const vis=v3.z<1&&d<110;
+  for(const s of staticLabels){ v3.copy(s.p).project(camera); const d=camera.position.distanceTo(s.p); const vis=layers.labels&&v3.z<1&&d<110;
     s.el.style.display=vis?'block':'none'; s.el.style.left=(v3.x*.5+.5)*w+'px'; s.el.style.top=(-v3.y*.5+.5)*h+'px'; }
   if(!isMobile) drawMini();
 }
@@ -465,6 +487,12 @@ paint(); requestAnimationFrame(frame);
 setTimeout(()=>{ $('loader').classList.add('done'); ready=true; if(pending){ const p=pending; pending=null; setTimeout(()=>focus(p.code,p.floor),900); } },300);
 
 /* ============ API ให้ src/main.ts เรียก ============ */
+export function setLayer(name,on){
+  if(!(name in layers)) return; layers[name]=on;
+  if(name==='buildings'){ DATA.forEach(b=>{ b.grp.visible=on; }); if(outline) outline.visible=on; if(floorBand) floorBand.visible=on; if(!on) hover(null); }
+  if(name==='trees') TREES.forEach(m=>{ m.visible=on; });
+  if(name==='zones'&&zoneGrp) zoneGrp.visible=on;
+}
 export function setHooks(h){ Object.assign(hooks,h); }
 /** บินไปที่อาคาร (รหัส B08 / U1) และไฮไลต์ชั้น */
 export function focus(code,floor=null){

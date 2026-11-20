@@ -42,8 +42,18 @@
   </div>
   <div class="right">
     <button class="ibtn vbtn" id="tView" title="มุมมอง 3D" aria-label="สลับมุมมอง 2D / 3D"><span id="tViewT">3D</span></button>
+    <button class="ibtn" id="tLayers" title="ชั้นข้อมูล" aria-label="ชั้นข้อมูล" aria-expanded="false" aria-controls="layers"><svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></button>
     <button class="ibtn" id="tList" title="รายการอาคาร" aria-label="รายการอาคาร"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></button>
   </div>
+</div>
+
+<div id="layers" role="group" aria-label="ชั้นข้อมูล">
+  <h3>ชั้นข้อมูล <small>LAYERS</small></h3>
+  <label><input type="checkbox" data-layer="buildings" checked><span class="sw"></span>อาคาร</label>
+  <label><input type="checkbox" data-layer="labels" checked><span class="sw"></span>ป้ายชื่อ</label>
+  <label><input type="checkbox" data-layer="zones" checked><span class="sw"></span>โซน (หน้ามอ / กลางมอ / หลังมอ)</label>
+  <label><input type="checkbox" data-layer="services" checked><span class="sw"></span>จุดบริการ</label>
+  <label><input type="checkbox" data-layer="trees" checked><span class="sw"></span>ต้นไม้</label>
 </div>
 
 <aside id="panel" aria-live="polite">

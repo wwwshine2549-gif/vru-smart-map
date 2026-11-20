@@ -272,7 +272,7 @@ function placeTags() {
     const t = tags.get(b.num)!;
     const p = toScreen(b.cx, b.cy - b.h / 2);
     const isSel = selected === b;
-    const show = layers.labels || isSel;
+    const show = (layers.labels && layers.buildings) || isSel;
     const wpx = near || isSel ? 30 + short(b.name).length * 6.2 : 34;
     const box: [number, number, number, number] = [p.x - wpx / 2, p.y - 30, p.x + wpx / 2, p.y - 6];
     const off = p.x < -60 || p.x > W + 60 || p.y < -20 || p.y > H + 40;

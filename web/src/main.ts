@@ -3,7 +3,7 @@ import './app.css';
 import { BLDGS, byCode, byNum, findBuilding, findRoomExact, findRooms, type Bld } from './catalog.ts';
 import { CATS, ZONES, type ZoneNum } from './data/services.ts';
 import { closePanel, esc, initPanel, openPanel, panelBuilding, toast, type PanelOpt } from './panel.ts';
-import { flyTo, goZone, initMap, onViewChange, setSelected, zoneAtView } from './map2d.ts';
+import { flyTo, goZone, initMap, onViewChange, setLayer, setSelected, zoneAtView, type LayerName } from './map2d.ts';
 import { popularTasks, search, type Hit } from './search.ts';
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -18,6 +18,7 @@ interface Scene3D {
   clear(): void;
   goZone(z: ZoneNum): void;
   setActive(on: boolean): void;
+  setLayer(name: LayerName, on: boolean): void;
 }
 let scene3d: Scene3D | null = null, loading3d: Promise<Scene3D | null> | null = null, is3d = false;
 let curFloor: number | null = null;
@@ -26,6 +27,7 @@ function load3d() {
   loading3d ??= import('./scene3d/app.ts').then((mod) => {
     const m = mod as unknown as Scene3D;
     m.setHooks({ pick: (code: string) => { const b = byCode.get(code); if (b) select(b); }, closed: () => deselect(true), insets: panelInsets });
+    for (const [k, on] of Object.entries(layerState)) m.setLayer(k as LayerName, on);
     return (scene3d = m);
   }).catch((err) => {
     console.error(err);
@@ -196,6 +198,19 @@ addEventListener('keydown', (e) => {
   if (e.key === '/') { e.preventDefault(); q.focus(); }
   else if (e.key === 'Escape') { $('list').classList.remove('on'); deselect(); }
 });
+
+// ---------- แผงชั้นข้อมูล ----------
+const layerState: Record<LayerName, boolean> = { buildings: true, labels: true, zones: true, services: true, trees: true };
+const layersEl = $('layers');
+const showLayers = (on: boolean) => { layersEl.classList.toggle('on', on); $('tLayers').setAttribute('aria-expanded', String(on)); };
+$('tLayers').onclick = (e) => { e.stopPropagation(); showLayers(!layersEl.classList.contains('on')); };
+document.addEventListener('pointerdown', (e) => { if (!(e.target as Element).closest('#layers,#tLayers')) showLayers(false); });
+layersEl.querySelectorAll<HTMLInputElement>('input[data-layer]').forEach((inp) => (inp.onchange = () => {
+  const k = inp.dataset.layer as LayerName;
+  layerState[k] = inp.checked;
+  setLayer(k, inp.checked);
+  scene3d?.setLayer(k, inp.checked);
+}));
 
 // ---------- รายการอาคาร ----------
 $('tList').onclick = () => $('list').classList.add('on');
