@@ -56,9 +56,10 @@
 
 ## งานที่เหลือ (ตามลำดับ)
 1. ✅ ขั้น 1: scaffold `web/` + schema + importer + CSV ตัวอย่าง
-2. ขั้น 2 (ก่อน 21 ธ.ค.): MVP ค้นหาห้อง (Fuse.js) + แผนที่ 2D SVG 3 โซน + panel + URL `?b=` / `?r=`
-3. ขั้น 3: QR Code + PDF A5 ต่ออาคาร + deploy GitHub Pages ด้วย Actions
-4. ขั้น 4: มุมมอง 3D lazy-load (พอร์ตจาก v0.5) loader รองรับ .glb ภายหลัง
+2. ✅ ขั้น 2: MVP ค้นหาห้อง (Fuse.js) + แผนที่ 2D SVG 3 โซน + panel + URL `?b=` / `?r=` + แผงชั้นข้อมูล
+   (ข้อมูลจริงยังว่าง: export CSV จาก Sheet ไว้ใน `web/data/sheet/` แล้ว `npm run import`)
+3. ขั้น 3: QR Code + PDF A5 ต่ออาคาร + deploy GitHub Pages (workflow `.github/workflows/deploy.yml` พร้อม รอ repo)
+4. ✅ ขั้น 4: มุมมอง 3D lazy-load + loader .glb (`src/scene3d/models.ts`, `npm run models:check`, `npm run models:test`)
 5. ขั้น 5: โมเดล Blender `public/models/<buildingId>.glb` (รวม ≤ 5MB, Draco)
 6. ขั้น 6: วิเคราะห์ timing ก่อน/หลัง (เป้าลดเวลา ≥30%) + ความพึงพอใจ (เป้า ≥70% ระดับมากขึ้นไป) — ไม่เก็บข้อมูลส่วนตัว
 - ภายหลัง: geolocation ผ่าน affine G1–G5 (ถ้า error เกิน ~15 ม. ใช้พิกัดทางเข้าอาคารช่วยปรับ), แท็บชุมชนรอบมอ (Leaflet + OSM)
