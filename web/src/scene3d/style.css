@@ -4,7 +4,8 @@
   --paper:#f5f2eb; --card:#fffdf8; --line:#d9d3c6; --line2:#ebe6db;
   --accent:#ff5a1f;
   --mono:'IBM Plex Mono',ui-monospace,monospace;
-  --sans:'IBM Plex Sans Thai',system-ui,sans-serif;
+  --sans:'Sarabun',system-ui,sans-serif;
+  --head:'Prompt','Sarabun',system-ui,sans-serif;
   --glass:rgba(255,253,248,.86);
 }
 *{box-sizing:border-box;margin:0;padding:0}

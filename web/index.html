@@ -2,69 +2,63 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>VRU Smart Map — หุ่นจำลองดิจิทัล</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16191d">
+<meta name="description" content="แผนที่ดิจิทัลค้นหาอาคารและห้องเรียน มหาวิทยาลัยราชภัฏวไลยอลงกรณ์ ในพระบรมราชูปถัมภ์">
+<title>VRU Smart Map — แผนที่ค้นหาอาคารและห้องเรียน</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600&family=Sarabun:wght@400;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 </head>
-<body>
-<canvas id="scene"></canvas>
-<div id="tags"></div>
+<body class="mode2d">
+<div id="map2d"></div>
+<div id="tags2d"></div>
 
 <div id="top">
   <div class="left">
-    <div class="brand"><div class="mark">VRU</div><div><b>SMART MAP</b><small>หุ่นจำลองดิจิทัล · v0.5</small></div></div>
+    <div class="brand"><div class="mark">VRU</div><div><b>SMART MAP</b><small>แผนที่ค้นหาอาคาร · v0.6</small></div></div>
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" placeholder="จะไปทำอะไร? เช่น จ่ายค่าเทอม, กยศ, 15-409" autocomplete="off">
-      <div class="results" id="results"></div>
+      <input id="q" type="search" enterkeyhint="search" placeholder="จะไปทำอะไร? เช่น จ่ายค่าเทอม, กยศ, 15-409" autocomplete="off" aria-label="ค้นหาห้อง อาคาร หรือเรื่องที่จะไปทำ">
+      <div class="results" id="results" role="listbox"></div>
     </div>
   </div>
   <div class="zonebar" id="zonebar">
     <button class="zbtn on" data-z="1"><small>ZONE 01</small>หน้ามอ</button>
     <button class="zbtn" data-z="2"><small>ZONE 02</small>กลางมอ</button>
     <button class="zbtn" data-z="3"><small>ZONE 03</small>หลังมอ</button>
-    <div class="zprog"><div id="zprog"></div></div>
   </div>
   <div class="right">
-    <div class="ibtn" id="tList" title="รายการอาคาร"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></div>
+    <button class="ibtn" id="tList" title="รายการอาคาร" aria-label="รายการอาคาร"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></button>
   </div>
 </div>
-
-<div id="zt"><small id="ztS">ZONE 01 / 03</small><h2 id="ztH">หน้ามหาวิทยาลัย</h2><p id="ztP"></p></div>
-<div id="hint"><span>เลื่อนเมาส์ / ปัดขึ้น เพื่อบินไปข้างหน้า · ลากเพื่อมองรอบ</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
-<div id="mini"><b>แผนผัง</b><canvas id="mcv" width="156" height="548"></canvas></div>
 
 <aside id="panel" aria-live="polite">
   <div class="p-head">
     <div class="p-id"><span class="code" id="pCode">B00</span><span id="pZone"></span></div>
-    <div class="p-name" id="pName">—</div>
+    <h2 class="p-name" id="pName">—</h2>
     <div class="p-chips" id="pChips"></div>
     <button class="close" id="pClose" aria-label="ปิด"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
   <div class="p-body">
     <div id="pRoom"></div>
+    <div class="photo" id="pPhoto"></div>
+    <div class="grid" id="pGrid"></div>
     <div id="pAbout"></div>
     <div id="pSvc"></div>
-    <div class="photo" id="pPhoto" style="margin-top:16px"></div>
-    <div class="grid" id="pGrid"></div>
     <div class="sec" id="pRoomsSec"><h4><span>ชั้น · ห้อง</span><span>ROOMS</span></h4><div id="pRooms"></div></div>
     <div class="sec"><h4><span>ลิงก์ตรง (สำหรับ QR)</span><span>DEEP LINK</span></h4><div class="todo" id="pLink"></div></div>
     <div class="nav"><button id="pPrev">← อาคารก่อนหน้า</button><button id="pNext">อาคารถัดไป →</button></div>
   </div>
   <div class="p-foot">
     <button class="btn" id="pNav" disabled><svg viewBox="0 0 24 24"><path d="M12 2 4 21l8-4 8 4z"/></svg>นำทางด้วย Google Maps</button>
-    <button class="btn ghost" id="pCopy" title="คัดลอกลิงก์"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button>
-    <button class="btn ghost" id="pBack" title="กลับสู่เส้นทางบิน"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
-    <div class="hint2">ปุ่มนำทางจะเปิดใช้เมื่อได้พิกัดจุดอ้างอิง 3 จุด · ลากเพื่อหมุนรอบอาคาร</div>
+    <button class="btn ghost" id="pCopy" title="คัดลอกลิงก์" aria-label="คัดลอกลิงก์"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button>
+    <div class="hint2">ปุ่มนำทางจะเปิดใช้เมื่อได้พิกัดจุดอ้างอิงครบ</div>
   </div>
 </aside>
 
-<div id="list"><div class="list-box"><h3>อาคารทั้งหมด <button class="close" style="position:static" id="lClose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></h3><div id="listBody"></div></div></div>
+<div id="list"><div class="list-box"><h3>อาคารทั้งหมด <button class="close" style="position:static" id="lClose" aria-label="ปิด"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></h3><div id="listBody"></div></div></div>
 <div id="toast"></div>
-<div id="tip"></div>
-<div id="loader"><div>กำลังประกอบหุ่นจำลอง</div></div>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
