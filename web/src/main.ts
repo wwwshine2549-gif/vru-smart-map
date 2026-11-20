@@ -1,8 +1,8 @@
 import './scene3d/style.css';
 import './app.css';
-import { BLDGS, type Bld } from './catalog.ts';
+import { BLDGS, byNum, findBuilding, findRoomExact, findRooms, type Bld } from './catalog.ts';
 import { CATS, ZONES, type ZoneNum } from './data/services.ts';
-import { closePanel, esc, initPanel, openPanel, panelBuilding, type PanelOpt } from './panel.ts';
+import { closePanel, esc, initPanel, openPanel, panelBuilding, toast, type PanelOpt } from './panel.ts';
 import { flyTo, goZone, initMap, onViewChange, setSelected, zoneAtView } from './map2d.ts';
 import { popularTasks, search, type Hit } from './search.ts';
 
@@ -15,13 +15,42 @@ function select(b: Bld, opt: PanelOpt = {}) {
   $('list').classList.remove('on');
   setSelected(b);
   openPanel(b, opt);
+  setUrl(opt.room ? { r: opt.room.roomNumber } : { b: b.code });
   // รอให้ panel วางตัวก่อน แล้วค่อยคำนวณพื้นที่ที่ไม่ถูกบัง
   requestAnimationFrame(() => flyTo(b));
 }
 function deselect() {
   setSelected(null);
   closePanel();
+  setUrl({});
 }
+
+// ---------- ลิงก์ตรง: ?b=B08, ?r=15-409 และ #b8 แบบเดิมของ v0.5 ----------
+function setUrl(p: { b?: string; r?: string }) {
+  const u = new URL(location.href);
+  u.searchParams.delete('b'); u.searchParams.delete('r'); u.hash = '';
+  if (p.b) u.searchParams.set('b', p.b);
+  if (p.r) u.searchParams.set('r', p.r);
+  try { history.replaceState(null, '', u); } catch { /* file:// */ }
+}
+function openFromUrl(): boolean {
+  const sp = new URLSearchParams(location.search);
+  const r = sp.get('r'), bq = sp.get('b');
+  const hm = location.hash.match(/^#b(\d+)$/i);
+  if (r) {
+    const hit = findRoomExact(r) ?? findRooms(r, 1)[0];
+    if (hit) { select(hit.b, { room: hit }); return true; }
+    toast(`ไม่พบห้อง ${r} ในข้อมูล`);
+  }
+  const b = bq ? findBuilding(bq) : hm ? byNum.get(Number(hm[1])) : undefined;
+  if (b) { select(b); return true; }
+  if (bq || hm) toast(`ไม่พบอาคาร ${bq ?? location.hash}`);
+  return false;
+}
+addEventListener('hashchange', () => {
+  const m = location.hash.match(/^#b(\d+)$/i);
+  if (m && panelBuilding()?.num !== Number(m[1])) openFromUrl();
+});
 
 initPanel({
   onClose: deselect,
@@ -115,4 +144,6 @@ $('list').addEventListener('click', (e) => { if ((e.target as Element).id === 'l
 $('listBody').innerHTML = ([1, 2, 3] as ZoneNum[]).map((z) =>
   `<div class="zone-h">ZONE 0${z} · ${ZONES[z].name}</div>` +
   BLDGS.filter((b) => b.zone === z).map((b) => `<div class="li" data-n="${b.num}"><span class="n">${b.code}</span><span class="d" style="background:${CATS[b.cat].c}"></span>${esc(b.name)}</div>`).join('')).join('');
-$('listBody').querySelectorAll<HTMLElement>('.li').forEach((el) => (el.onclick = () => select(BLDGS.find((b) => b.num === Number(el.dataset.n))!)));
+$('listBody').querySelectorAll<HTMLElement>('.li').forEach((el) => (el.onclick = () => select(byNum.get(Number(el.dataset.n))!)));
+
+openFromUrl();
