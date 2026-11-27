@@ -1,5 +1,5 @@
 # Deploy เว็บใน web/ ขึ้น GitHub Pages ทุกครั้งที่ push เข้า main หรือ master
-# ตั้งค่าครั้งแรกบน GitHub: Settings > Pages > Build and deployment > Source = GitHub Actions
+# ตั้งค่าครั้งแรกบน GitHub: Settings > Pages > Build and deployment > Source = GitHub Actions (ตั้งแล้ว 27 พ.ย. 2569)
 name: Deploy to GitHub Pages
 
 on:
