@@ -141,7 +141,8 @@ export function findRooms(q: string, limit = 6): RoomHit[] {
     if (key.startsWith(k)) for (const { room, b } of list) push({ b, roomNumber: room.roomNumber, floor: room.floor, room, inferred: false });
   }
   if (!out.length) {
-    const m = n.match(/^(\d{1,2})-(\d)([0-9a-z]{1,3})$/);
+    // เลขล้วน 4 หลัก = ชั้นสองหลัก (15-1203 → ชั้น 12) · นอกนั้นชั้นหลักเดียว (15-409, 15-4GS9)
+    const m = n.match(/^(\d{1,2})-(\d{2})(\d{2})$/) ?? n.match(/^(\d{1,2})-(\d)([0-9a-z]{1,3})$/);
     const hit = m && ROOM_CODE.get(m[1]);
     if (m && hit) push({ b: hit.b, roomNumber: `${m[1]}-${m[2]}${m[3].toUpperCase()}`, floor: Number(m[2]), room: null, inferred: true });
   }

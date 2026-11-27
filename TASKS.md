@@ -13,7 +13,7 @@
 | 4 | แผงชั้นข้อมูล เปิด/ปิด | Claude | เสร็จ (1fcbf4a) | web/src/ |
 | 5 | Model loader ตาม docs/model-contract.md + โมเดลทดสอบ | Claude | เสร็จ (a07b534) | web/src/scene3d/, web/public/draco/, web/scripts/ |
 | 6 | Deploy GitHub Pages ด้วย Actions | Claude | เสร็จ 27 พ.ย. 2569 (db630c6) https://wwwshine2549-gif.github.io/vru-smart-map/ | .github/, web/vite.config.ts |
-| 9 | บั๊ก: `15-1203` ได้ชั้น 1 (ต้องเป็นชั้น 12) — regex ใน `findRooms` ให้เลขชั้นหลักเดียว | Claude | รอทำ | web/src/catalog.ts |
+| 9 | บั๊ก: `15-1203` ได้ชั้น 1 (ต้องเป็นชั้น 12) — regex ใน `findRooms` ให้เลขชั้นหลักเดียว | Claude | เสร็จ 27 พ.ย. — เลขล้วน 4 หลักหลังขีด = ชั้นสองหลัก (กฎอนุมาน ยังต้องยืนยันกับเลขห้องจริงของอาคารอื่น) | web/src/catalog.ts |
 | 8 | (ถ้ามีเวลา) วัดระยะทางเดิน / มุมมองจากรูปถ่าย / ตัดภาพแยกชั้น | — | รอทำ | web/src/ |
 | 7 | ปั้นโมเดล B05 อาคาร 80 ปี → B08 อาคาร 100 ปี → B01 อนุสาวรีย์ | Claude | รอทำ (รอรูปถ่ายหลายมุม) | web/public/models/ |
 
