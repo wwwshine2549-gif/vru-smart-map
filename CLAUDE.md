@@ -58,7 +58,7 @@
 1. ✅ ขั้น 1: scaffold `web/` + schema + importer + CSV ตัวอย่าง
 2. ✅ ขั้น 2: MVP ค้นหาห้อง (Fuse.js) + แผนที่ 2D SVG 3 โซน + panel + URL `?b=` / `?r=` + แผงชั้นข้อมูล
    (ข้อมูลจริงยังว่าง: export CSV จาก Sheet ไว้ใน `web/data/sheet/` แล้ว `npm run import`)
-3. ขั้น 3: QR Code + PDF A5 ต่ออาคาร + deploy GitHub Pages (workflow `.github/workflows/deploy.yml` พร้อม รอ repo)
+3. ขั้น 3: QR Code + PDF A5 ต่ออาคาร + deploy GitHub Pages — deploy แล้ว 27 พ.ย. 2569: https://wwwshine2549-gif.github.io/vru-smart-map/ (repo `wwwshine2549-gif/vru-smart-map` สาธารณะ, push master แล้ว deploy อัตโนมัติเมื่อแก้ `web/**`; commit ใช้อีเมล noreply, รหัส commit ก่อน 27 พ.ย. ถูกเขียนใหม่) · ยังเหลือ QR + PDF
 4. ✅ ขั้น 4: มุมมอง 3D lazy-load + loader .glb (`src/scene3d/models.ts`, `npm run models:check`, `npm run models:test`)
 5. ขั้น 5: โมเดล Blender `public/models/<buildingId>.glb` (รวม ≤ 5MB, Draco)
 6. ขั้น 6: สรุปแบบประเมินความพึงพอใจ นศ.ปี 1 จำนวน 30 คน (ไม่มีการจับเวลาก่อน/หลังแล้ว ตามคำแนะนำอาจารย์ 24 พ.ย. 2569) — ไม่เก็บข้อมูลส่วนตัว
