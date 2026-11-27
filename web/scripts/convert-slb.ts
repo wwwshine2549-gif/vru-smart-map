@@ -1,5 +1,5 @@
 /**
- * แปลงโมเดลอาคารจากไฟล์ HTML (Three.js) → public/models/B32.glb
+ * แปลงโมเดลอาคารจากไฟล์ HTML (Three.js) → public/models/B29.glb
  *   npx tsx scripts/convert-slb.ts "<ไฟล์ .html>"
  * เอาเฉพาะโค้ดสร้างอาคาร (ไม่เอาฉาก แสง UI) · ป้ายชื่อที่เป็น canvas texture ยังไม่แปลง
  * คำเตือน: สคริปต์รันโค้ดส่วนนั้นจากไฟล์ ใช้กับไฟล์ที่อ่านตรวจแล้วเท่านั้น
@@ -62,7 +62,7 @@ const dx = (minX + maxX) / 2, dz = (minZ + maxZ) / 2;
 const doc = new Document();
 const buffer = doc.createBuffer();
 const sc = doc.createScene('scene').setExtras({ floors: 6, floorHeight: 4 });
-const root = doc.createNode('B32');
+const root = doc.createNode('B29');
 sc.addChild(root);
 const mesh = doc.createMesh('building');
 for (const b of buckets.values()) {
@@ -82,8 +82,8 @@ await doc.transform(weld(), draco({ method: 'edgebreaker' }));
 const out = new URL('../public/models/', import.meta.url);
 mkdirSync(out, { recursive: true });
 const bytes = await io.writeBinary(doc);
-writeFileSync(new URL('B32.glb', out), bytes);
+writeFileSync(new URL('B29.glb', out), bytes);
 const idx = new URL('index.json', out);
 const list: string[] = JSON.parse(readFileSync(idx, 'utf8'));
-writeFileSync(idx, JSON.stringify([...new Set([...list, 'B32'])].sort()) + '\n');
-console.log(`เขียน models/B32.glb ${(bytes.byteLength / 1024).toFixed(1)} KB · วัสดุ ${buckets.size} สี · ข้ามป้ายชื่อ ${skipped} ชิ้น`);
+writeFileSync(idx, JSON.stringify([...new Set([...list, 'B29'])].sort()) + '\n');
+console.log(`เขียน models/B29.glb ${(bytes.byteLength / 1024).toFixed(1)} KB · วัสดุ ${buckets.size} สี · ข้ามป้ายชื่อ ${skipped} ชิ้น`);

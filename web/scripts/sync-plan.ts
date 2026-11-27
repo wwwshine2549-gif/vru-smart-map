@@ -1,4 +1,4 @@
-/** data_pdf.js (v0.5) → src/data/plan.json ให้ฉาก 3D ใช้ — รันใหม่ทุกครั้งที่แก้ data_pdf.js */
+/** data_pdf.js (v0.5) + เลขแผนผังใหม่ (lib/renumber.ts) → src/data/plan.json — รันใหม่ทุกครั้งที่แก้ data_pdf.js หรือ renumber.ts */
 import { writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

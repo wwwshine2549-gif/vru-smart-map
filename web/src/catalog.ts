@@ -1,6 +1,6 @@
 /**
  * รวมข้อมูลอาคารทุกหลังให้หน้า 2D / panel / ค้นหาใช้ร่วมกัน (ไม่พึ่ง three.js)
- * - รูปทรงและตำแหน่ง: plan.json (แผนผัง 2559) ครบ 53 หลัง
+ * - รูปทรงและตำแหน่ง: plan.json (รูปทรงจากแผนผัง 2559, เลขตามแผนผังใหม่ 1–57 + U1–U11)
  * - ข้อมูลที่ตรวจแล้วจาก Sheet: buildings.json, rooms.json, services.json (npm run import)
  * - ข้อมูลบริการจากเว็บไซต์มหาวิทยาลัย (ยังไม่ตรวจ): services.ts
  */
@@ -9,7 +9,7 @@ import sheetBuildings from './data/buildings.json';
 import sheetRooms from './data/rooms.json';
 import sheetServices from './data/services.json';
 import pendingData from './data/pending.json';
-import { ALIAS, BCODE, SERVICES, ZONE_Y, type BuildingServices, type CatKey, type ZoneNum } from './data/services.ts';
+import { ABBR, ALIAS, BCODE, SERVICES, ZONE_Y, type BuildingServices, type CatKey, type ZoneNum } from './data/services.ts';
 import type { Building, FloorService, Room, Zone } from './types.ts';
 
 export type Rect = [number, number, number, number, (number | null)?, number?];
@@ -24,7 +24,7 @@ export interface PlanMap {
 export interface Photo { src: string; caption: string }
 
 export interface Bld {
-  /** เลขในแผนผัง: 1–48, 101–105 */
+  /** เลขในแผนผังใหม่: 1–57, 101–111 (= U1–U11 ไม่มีเลขในแผนผัง) */
   num: number;
   /** รหัสใน Sheet: B08, U1 */
   code: string;
@@ -55,8 +55,8 @@ export interface Bld {
 
 const ZONE_NUM: Record<Zone, ZoneNum> = { front: 1, middle: 2, back: 3 };
 const NOTE: Record<number, string> = {
-  5: 'รูปทรงอ้างอิงภาพออกแบบอาคาร',
-  45: 'แผนผังปี 2559 ระบุว่า "กำลังก่อสร้าง" — ต้องตรวจสถานะและรูปทรงจริง',
+  ...(plan as unknown as { NOTE?: Record<number, string> }).NOTE,
+  1: 'รูปทรงอ้างอิงภาพออกแบบอาคาร',
 };
 
 export const MAP = (plan as unknown as { MAP: PlanMap }).MAP;
@@ -92,8 +92,8 @@ export const BLDGS: Bld[] = (plan as unknown as { B: PlanRow[] }).B.map(([num, p
     floors: sheet?.floors ?? pend?.floors ?? floors,
     cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0,
     zone: sheet ? ZONE_NUM[sheet.zone] : zoneOfY(py),
-    alias: ALIAS[num] ?? [],
-    note: NOTE[num] ?? ((!sheet && pend?.note) || (cat === 'unknown' ? 'ไม่มีหมายเลข/ชื่อในแผนผังปี 2559 — ต้องระบุหน้างาน' : '')),
+    alias: [...(ALIAS[num] ?? []), ...(ABBR[num] ? [ABBR[num]] : [])],
+    note: NOTE[num] ?? ((!sheet && pend?.note) || (cat === 'unknown' ? 'ไม่มีหมายเลขในแผนผัง — ต้องระบุหน้างาน' : '')),
     sheet,
     rooms: sRooms.length ? sRooms : pend?.rooms ?? [],
     services: sServices.length ? sServices : pend?.services ?? [],
@@ -110,7 +110,7 @@ export function findBuilding(s: string): Bld | undefined {
   const v = s.trim().toUpperCase();
   const m = v.match(/^B?0*(\d{1,3})$/);
   if (m) return byNum.get(Number(m[1]));
-  const u = v.match(/^U(\d)$/);
+  const u = v.match(/^U(\d{1,2})$/);
   if (u) return byNum.get(100 + Number(u[1]));
   return byCode.get(v);
 }

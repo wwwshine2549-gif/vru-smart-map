@@ -176,7 +176,7 @@ for (const r of load(bFile, Object.values(BH))) {
   if (!usable(r, BH.id, BH.status)) continue;
   const where = at(bFile, r.sheetRow);
   const id = r.get(BH.id);
-  if (!/^(B\d{2}|U\d)$/.test(id)) {
+  if (!/^(B\d{2}|U\d{1,2})$/.test(id)) {
     errors.push(`${where}: รหัสอาคาร "${id}" ผิดรูปแบบ (ต้องเป็น B01–B48 หรือ U1–U5)`);
     continue;
   }

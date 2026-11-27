@@ -97,7 +97,7 @@ function draw() {
     const t = document.createElement('div');
     t.className = 'tag';
     t.style.setProperty('--c', CATS[b.cat].c);
-    t.innerHTML = `<i></i>${b.code.slice(1)}<span>${short(b.name)}</span>`;
+    t.innerHTML = `<i></i>${b.code[0]==='U'?b.code:b.code.slice(1)}<span>${short(b.name)}</span>`;
     t.addEventListener('click', (e) => { e.stopPropagation(); h.onPick(b); });
     tagsEl.appendChild(t);
     tags.set(b.num, t);

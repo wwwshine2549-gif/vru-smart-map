@@ -1,5 +1,5 @@
 /**
- * แปลงโมเดลอาคาร 75 ปี (B09) ให้ตรงข้อตกลง docs/model-contract.md → public/models/B09.glb
+ * แปลงโมเดลอาคาร 75 ปี (B12, เดิม B09) ให้ตรงข้อตกลง docs/model-contract.md → public/models/B12.glb
  *   npx tsx scripts/convert-b09.ts "<ต้นฉบับ .glb>" model-src/b09_signs
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -80,8 +80,8 @@ await doc.transform(prune(), dedup(), weld(), draco({ method: 'edgebreaker' }));
 const out = new URL('../public/models/', import.meta.url);
 mkdirSync(out, { recursive: true });
 const bytes = await io.writeBinary(doc);
-writeFileSync(new URL('B09.glb', out), bytes);
+writeFileSync(new URL('B12.glb', out), bytes);
 const idx = new URL('index.json', out);
 const list: string[] = JSON.parse(readFileSync(idx, 'utf8'));
-writeFileSync(idx, JSON.stringify([...new Set([...list, 'B09'])].sort()) + '\n');
-console.log(`เขียน models/B09.glb ${(bytes.byteLength / 1024).toFixed(1)} KB`);
+writeFileSync(idx, JSON.stringify([...new Set([...list, 'B12'])].sort()) + '\n');
+console.log(`เขียน models/B12.glb ${(bytes.byteLength / 1024).toFixed(1)} KB`);

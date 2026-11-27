@@ -1,327 +1,327 @@
 {
- "B32": {
+ "B29": {
   "floors": 6,
   "note": "ห้อง จำนวนชั้น และโมเดล 3 มิติ (รวมทิศด้านหน้า) รอตรวจสอบ",
   "rooms": [
    {
-    "id": "B32:SCC2 101",
+    "id": "B29:SCC2 101",
     "roomNumber": "SCC2 101",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 1,
     "type": "แล็บ",
     "note": "ห้องทดสอบภาคปฏิบัติ",
     "verified": false
    },
    {
-    "id": "B32:SCC2 102",
+    "id": "B29:SCC2 102",
     "roomNumber": "SCC2 102",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 1,
     "type": "แล็บ",
     "note": "ห้องทดสอบภาคปฏิบัติ",
     "verified": false
    },
    {
-    "id": "B32:SCC2 103",
+    "id": "B29:SCC2 103",
     "roomNumber": "SCC2 103",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 1,
     "type": "แล็บ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 104",
+    "id": "B29:SCC2 104",
     "roomNumber": "SCC2 104",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 1,
     "type": "แล็บ",
     "note": "ห้องปฏิบัติการแปรรูปอาหาร (Food processing laboratory)",
     "verified": false
    },
    {
-    "id": "B32:SCC2 201",
+    "id": "B29:SCC2 201",
     "roomNumber": "SCC2 201",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 2,
     "type": "อื่น ๆ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 202",
+    "id": "B29:SCC2 202",
     "roomNumber": "SCC2 202",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 2,
     "type": "อื่น ๆ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 203",
+    "id": "B29:SCC2 203",
     "roomNumber": "SCC2 203",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 2,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 204",
+    "id": "B29:SCC2 204",
     "roomNumber": "SCC2 204",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 2,
     "type": "อื่น ๆ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 205",
+    "id": "B29:SCC2 205",
     "roomNumber": "SCC2 205",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 2,
     "type": "อื่น ๆ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 206",
+    "id": "B29:SCC2 206",
     "roomNumber": "SCC2 206",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 2,
     "type": "อื่น ๆ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 209",
+    "id": "B29:SCC2 209",
     "roomNumber": "SCC2 209",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 2,
     "type": "อื่น ๆ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 210",
+    "id": "B29:SCC2 210",
     "roomNumber": "SCC2 210",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 2,
     "type": "อื่น ๆ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 211",
+    "id": "B29:SCC2 211",
     "roomNumber": "SCC2 211",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 2,
     "type": "อื่น ๆ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 212",
+    "id": "B29:SCC2 212",
     "roomNumber": "SCC2 212",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 2,
     "type": "อื่น ๆ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 301",
+    "id": "B29:SCC2 301",
     "roomNumber": "SCC2 301",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 3,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 302",
+    "id": "B29:SCC2 302",
     "roomNumber": "SCC2 302",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 3,
     "type": "แล็บ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 304",
+    "id": "B29:SCC2 304",
     "roomNumber": "SCC2 304",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 3,
     "type": "แล็บ",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 306",
+    "id": "B29:SCC2 306",
     "roomNumber": "SCC2 306",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 3,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 307",
+    "id": "B29:SCC2 307",
     "roomNumber": "SCC2 307",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 3,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 308",
+    "id": "B29:SCC2 308",
     "roomNumber": "SCC2 308",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 3,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 309",
+    "id": "B29:SCC2 309",
     "roomNumber": "SCC2 309",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 3,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 310",
+    "id": "B29:SCC2 310",
     "roomNumber": "SCC2 310",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 3,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 311",
+    "id": "B29:SCC2 311",
     "roomNumber": "SCC2 311",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 3,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 312",
+    "id": "B29:SCC2 312",
     "roomNumber": "SCC2 312",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 3,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 401",
+    "id": "B29:SCC2 401",
     "roomNumber": "SCC2 401",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 4,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 402",
+    "id": "B29:SCC2 402",
     "roomNumber": "SCC2 402",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 4,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 403",
+    "id": "B29:SCC2 403",
     "roomNumber": "SCC2 403",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 4,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 404",
+    "id": "B29:SCC2 404",
     "roomNumber": "SCC2 404",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 4,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 405",
+    "id": "B29:SCC2 405",
     "roomNumber": "SCC2 405",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 4,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 406",
+    "id": "B29:SCC2 406",
     "roomNumber": "SCC2 406",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 4,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 601",
+    "id": "B29:SCC2 601",
     "roomNumber": "SCC2 601",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 6,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 602",
+    "id": "B29:SCC2 602",
     "roomNumber": "SCC2 602",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 6,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 603",
+    "id": "B29:SCC2 603",
     "roomNumber": "SCC2 603",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 6,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 604",
+    "id": "B29:SCC2 604",
     "roomNumber": "SCC2 604",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 6,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 605",
+    "id": "B29:SCC2 605",
     "roomNumber": "SCC2 605",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 6,
     "type": "ห้องเรียน",
     "note": null,
     "verified": false
    },
    {
-    "id": "B32:SCC2 606",
+    "id": "B29:SCC2 606",
     "roomNumber": "SCC2 606",
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 6,
     "type": "ห้องเรียน",
     "note": null,
@@ -330,7 +330,7 @@
   ],
   "services": [
    {
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 5,
     "unit": "ห้องประชุมเพชรบุรีวิทยาลงกรณ์",
     "room": null,
@@ -344,7 +344,7 @@
     "verified": false
    },
    {
-    "buildingId": "B32",
+    "buildingId": "B29",
     "floor": 1,
     "unit": "Uni Learning Center & Sandbox (ห้อง SCC)",
     "room": null,
@@ -360,41 +360,48 @@
   ],
   "photos": [
    {
-    "src": "photos/B32_UniLearningCenter_1.webp",
+    "src": "photos/B29_UniLearningCenter_1.webp",
     "caption": "Uni Learning Center & Sandbox By Valaya Alongkorn · ห้อง SCC ชั้น 1"
    },
    {
-    "src": "photos/B32_UniLearningCenter_2.webp",
+    "src": "photos/B29_UniLearningCenter_2.webp",
     "caption": "ห้อง SCC ชั้น 1 · Uni Learning Center & Sandbox ด้านใน"
    },
    {
-    "src": "photos/B32_ห้องSCC_ชั้น1_2.webp",
+    "src": "photos/B29_ห้องSCC_ชั้น1_2.webp",
     "caption": "ห้อง SCC ชั้น 1 · เคาน์เตอร์ VRU Co-Learning Space (เบลอคน)"
    },
    {
-    "src": "photos/B32_ห้องSCC_ชั้น1_3.webp",
+    "src": "photos/B29_ห้องSCC_ชั้น1_3.webp",
     "caption": "ห้อง SCC ชั้น 1 · ชั้นหนังสือ"
    },
    {
-    "src": "photos/B32_ห้องSCC_ชั้น1_1.webp",
+    "src": "photos/B29_ห้องSCC_ชั้น1_1.webp",
     "caption": "โถงชั้น 1 หน้าห้อง SCC (เบลอคน)"
    },
    {
-    "src": "photos/B32_ห้องประชุมชั้น5_1.webp",
+    "src": "photos/B29_ห้องประชุมชั้น5_1.webp",
     "caption": "ห้องประชุมเพชรบุรีวิทยาลงกรณ์ · ชั้น 5 (เบลอช่องประตู)"
    },
    {
-    "src": "photos/B32_ห้องประชุมชั้น5_3.webp",
+    "src": "photos/B29_ห้องประชุมชั้น5_3.webp",
     "caption": "ภายในห้องประชุมเพชรบุรีวิทยาลงกรณ์ · มุมที่ 1 (เบลอคนและจอฉาย)"
    },
    {
-    "src": "photos/B32_ห้องประชุมชั้น5_2.webp",
+    "src": "photos/B29_ห้องประชุมชั้น5_2.webp",
     "caption": "ภายในห้องประชุมเพชรบุรีวิทยาลงกรณ์ · มุมที่ 2 (เบลอคนและจอฉาย)"
    }
   ]
  },
- "B09": {
+ "B12": {
   "floors": 9,
   "note": "จำนวนชั้น และโมเดล 3 มิติ (ทิศ สัดส่วน ป้ายหน่วยงาน) รอตรวจสอบ"
+ },
+ "B02": {
+  "floors": 15,
+  "note": "จำนวนชั้น และโมเดล 3 มิติ (สัดส่วน) รอตรวจสอบ"
+ },
+ "B01": {
+  "note": "โมเดล 3 มิติ (จำนวนชั้น ทิศด้านหน้า สัดส่วน) รอตรวจสอบ"
  }
 }

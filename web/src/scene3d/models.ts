@@ -48,7 +48,7 @@ export async function listModels(): Promise<string[]> {
     const r = await fetch(modelsBase() + 'index.json', { cache: 'no-cache' });
     if (!r.ok) return [];
     const j: unknown = await r.json();
-    return Array.isArray(j) ? j.filter((x): x is string => typeof x === 'string' && /^(B\d{2}|U\d)$/.test(x)) : [];
+    return Array.isArray(j) ? j.filter((x): x is string => typeof x === 'string' && /^(B\d{2}|U\d{1,2})$/.test(x)) : [];
   } catch {
     return [];
   }

@@ -7,13 +7,14 @@ import { boxInModel, listModels, loadModel } from './models.ts';
 
 const { B, MAP } = plan;
 
-const STYLE={modern:[3,6,7,8,9,10,16,26,28,31,32,37,38,44,45,102,103],arch:[4,15,35,36],shop:[21,22]};
+// เลขตามแผนผังใหม่ (scripts/lib/renumber.ts)
+const STYLE={modern:[2,3,6,7,8,12,13,14,15,26,27,28,29,31,33,34,37,40,41,43,44,45,46,47,48,49,50,51,52,55,56,110],arch:[5,11,42,105,57],shop:[4,21,22]};
 const styleOf=id=>STYLE.modern.includes(id)?'modern':STYLE.arch.includes(id)?'arch':STYLE.shop.includes(id)?'shop':'pitched';
-const NOTE={5:'รูปทรงอ้างอิงภาพออกแบบอาคาร',45:'แผนผังปี 2559 ระบุว่า "กำลังก่อสร้าง" — ต้องตรวจสถานะและรูปทรงจริง'};
+const NOTE={...(plan.NOTE||{}),1:'รูปทรงอ้างอิงภาพออกแบบอาคาร'};
 const DATA = B.map(([id,name,cat,floors,rects,kind])=>{
   const b={id,name,cat,floors,rects,kind,style:styleOf(id),lat:null,lng:null};
   b.code=id>100?'U'+(id-100):'B'+String(id).padStart(2,'0');
-  b.note=NOTE[id]||(cat==='unknown'?'ไม่มีหมายเลข/ชื่อในแผนผังปี 2559 — ต้องระบุหน้างาน':'');
+  b.note=NOTE[id]||(cat==='unknown'?'ไม่มีหมายเลขในแผนผัง — ต้องระบุหน้างาน':'');
   const ys=rects.map(r=>r[1]+r[3]/2); b.py=ys.length?ys.reduce((a,c)=>a+c,0)/ys.length:2000;
   b.zone=b.py<ZONE_Y[0]?1:b.py<ZONE_Y[1]?2:3; return b;});
 for(const z of [1,2,3]) ZONES[z].count=DATA.filter(b=>b.zone===z).length;
@@ -94,9 +95,9 @@ MAP.courts.forEach(r=>{ slab(...r,mat.court,0.045,0.06); slab(r[0]+2,r[1]+2,r[2]
   const mk=(L,W,m,y)=>{const g=new THREE.ExtrudeGeometry(sh(L,W),{depth:.06,bevelEnabled:false,curveSegments:28}); g.rotateX(-Math.PI/2); const o=new THREE.Mesh(g,m); o.position.set(X(st.cx),y,Z(st.cy)); o.receiveShadow=true; scene.add(o);};
   mk(st.L*S,st.W*S,mat.track,0.0); mk((st.L-44)*S,(st.W-44)*S,mat.fieldG,0.012);
   for(let i=1;i<6;i++){ const g=new THREE.EdgesGeometry(new THREE.ShapeGeometry(sh((st.L-i*7.5)*S,(st.W-i*7.5)*S),24)); g.rotateX(-Math.PI/2); const l=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xf3e6dc,transparent:true,opacity:.5})); l.position.set(X(st.cx),.075,Z(st.cy)); scene.add(l); }
-  const [gx,gy,gw,gh]=st.stand; const H=1.4;
+  if(st.stand){ const [gx,gy,gw,gh]=st.stand; const H=1.4;
   const s1=new THREE.Mesh(new THREE.BoxGeometry(gw*S,H,gh*S),mat.white); s1.position.set(X(gx+gw/2),H/2,Z(gy+gh/2)); s1.castShadow=s1.receiveShadow=true; scene.add(s1);
-  const s2=new THREE.Mesh(new THREE.BoxGeometry(gw*S+.4,.16,gh*S+1),M(0x2f6b3a)); s2.position.set(X(gx+gw/2),H+.6,Z(gy+gh/2)-.4); s2.castShadow=true; scene.add(s2); }
+  const s2=new THREE.Mesh(new THREE.BoxGeometry(gw*S+.4,.16,gh*S+1),M(0x2f6b3a)); s2.position.set(X(gx+gw/2),H+.6,Z(gy+gh/2)-.4); s2.castShadow=true; scene.add(s2); } }
 
 /* ============ facade textures ============ */
 function facade(kind){
@@ -154,7 +155,7 @@ function makeBuilding(b){
   const wallTex = b.style==='modern'?TEX.white : b.kind==='houses'?TEX.house : TEX.cream;
   const wall=own(new THREE.MeshStandardMaterial({map:wallTex,roughness:.82}));
   const flat=own(M(0xd6d6d2)); const white=own(mat.white);
-  let roofM = b.kind==='thai'?own(mat.woodDark) : (b.kind==='houses'||b.kind==='greenhouse')?own(mat.terracotta) : b.style==='arch'?own(M(b.id===4?0x8fc3cf:0x7f878f,{roughness:.6,metalness:.2})) : b.cat==='unknown'?own(M(0x9aa0a6)) : own(mat.roofDark);
+  let roofM = b.kind==='thai'?own(mat.woodDark) : (b.kind==='houses'||b.kind==='greenhouse')?own(mat.terracotta) : b.style==='arch'?own(M(b.id===5?0x8fc3cf:0x7f878f,{roughness:.6,metalness:.2})) : b.cat==='unknown'?own(M(0x9aa0a6)) : own(mat.roofDark);
   let maxH=0,minx=1e9,maxx=-1e9,minz=1e9,maxz=-1e9;
   const ext=(cx,cz,hw,hd)=>{minx=Math.min(minx,cx-hw);maxx=Math.max(maxx,cx+hw);minz=Math.min(minz,cz-hd);maxz=Math.max(maxz,cz+hd);};
 
@@ -244,7 +245,7 @@ function makeBuilding(b){
       } else {
         put(new THREE.Mesh(new THREE.BoxGeometry(W+.12,.2,D+.12),white),0,H+.1,0);
         if(W*D>8) put(new THREE.Mesh(new THREE.BoxGeometry(Math.min(W,D)*.35,.6,Math.min(W,D)*.45),flat),W*.15,H+.4,-D*.15);
-        if(b.style==='shop'){ put(new THREE.Mesh(new THREE.BoxGeometry(W+.08,.28,D+.08),own(M(b.id===21?0x19a3df:0x2b9a52))),0,H-.25,0); }
+        if(b.style==='shop'){ put(new THREE.Mesh(new THREE.BoxGeometry(W+.08,.28,D+.08),own(M(b.id===22?0x19a3df:0x2b9a52))),0,H-.25,0); }
         top=H+.2;
       }
       maxH=Math.max(maxH,top);
@@ -291,7 +292,7 @@ DATA.forEach(makeBuilding);
 const tagsEl=document.getElementById('tags'); const tagEls=new Map();
 const short=n=>n.replace(/^อาคาร/,'').replace(/\s*\(.*?\)/,m=>m.length>14?'':m).trim();
 DATA.forEach(b=>{const t=document.createElement('div');t.className='tag';t.style.setProperty('--c',CATS[b.cat].c);
-  t.innerHTML=`<i></i>${b.code.slice(1)}<span>${short(b.name)}</span>`;
+  t.innerHTML=`<i></i>${b.code[0]==='U'?b.code:b.code.slice(1)}<span>${short(b.name)}</span>`;
   t.addEventListener('click',e=>{e.stopPropagation();hooks.pick(b.code);});
   t.addEventListener('pointerenter',()=>hover(b)); t.addEventListener('pointerleave',()=>hover(null));
   tagsEl.appendChild(t); tagEls.set(b.id,t);});
