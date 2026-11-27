@@ -207,7 +207,7 @@ function renderSvc(b: Bld, openF: number | null | undefined, hlKey?: string) {
         `<span class="nm">${names.map(esc).join(' · ')}</span><span class="ch">›</span></button>` +
         `<div class="sfb">${sheet.map(sheetCard).join('')}${web.map((u) => webCard(u, u.k === hlKey)).join('')}</div></div>`;
     }).join('') +
-    `</div>${W ? '<div class="todo" style="margin-top:8px">ข้อมูลที่ติดป้าย "รอตรวจสอบ" รวบรวมจากเว็บไซต์มหาวิทยาลัย ทีมสำรวจต้องยืนยันในแท็บ <b>บริการรายชั้น</b></div>' : ''}</div>`;
+    `</div>${W ? '<div class="todo" style="margin-top:8px">ข้อมูลที่ติดป้าย "รอตรวจสอบ" มาจากเว็บไซต์มหาวิทยาลัยหรือทีมสำรวจ ยังต้องยืนยันในแท็บ <b>บริการรายชั้น</b></div>' : ''}</div>`;
   $('pSvc').querySelectorAll<HTMLElement>('.sf').forEach((row) => ((row.querySelector('.sfh') as HTMLElement).onclick = () => {
     const f = Number(row.dataset.f), was = row.classList.contains('open');
     $('pSvc').querySelectorAll('.sf').forEach((x) => x.classList.remove('open'));

@@ -8,6 +8,7 @@ import plan from './data/plan.json';
 import sheetBuildings from './data/buildings.json';
 import sheetRooms from './data/rooms.json';
 import sheetServices from './data/services.json';
+import pendingData from './data/pending.json';
 import { ALIAS, BCODE, SERVICES, ZONE_Y, type BuildingServices, type CatKey, type ZoneNum } from './data/services.ts';
 import type { Building, FloorService, Room, Zone } from './types.ts';
 
@@ -60,6 +61,10 @@ export const zoneOfY = (y: number): ZoneNum => (y < ZONE_Y[0] ? 1 : y < ZONE_Y[1
 
 const sheetById = new Map((sheetBuildings as Building[]).map((b) => [b.id, b]));
 
+/** ข้อมูลจากทีมที่ยังไม่ "ตรวจแล้ว" ใน Sheet (verified:false = ติดป้ายรอตรวจสอบ)
+ *  แยกไฟล์ไว้ไม่ให้ npm run import เขียนทับ · เมื่อ Sheet มีข้อมูลที่ตรวจแล้ว ใช้ของ Sheet แทนอัตโนมัติ */
+const PENDING_DATA = pendingData as unknown as Record<string, { floors?: number; note?: string; rooms?: Room[]; services?: FloorService[] }>;
+
 export const BLDGS: Bld[] = (plan as unknown as { B: PlanRow[] }).B.map(([num, planName, cat, floors, rects, kind]) => {
   const code = codeOf(num);
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
@@ -74,17 +79,20 @@ export const BLDGS: Bld[] = (plan as unknown as { B: PlanRow[] }).B.map(([num, p
   const ys = rects.map((r) => r[1] + r[3] / 2);
   const py = ys.reduce((a, c) => a + c, 0) / ys.length;
   const sheet = sheetById.get(code) ?? null;
+  const pend = PENDING_DATA[code];
+  const sRooms = (sheetRooms as Room[]).filter((r) => r.buildingId === code);
+  const sServices = (sheetServices as FloorService[]).filter((s) => s.buildingId === code);
   return {
     num, code, planName, cat: cat as CatKey, rects, kind,
     name: sheet?.name || planName,
-    floors: sheet?.floors ?? floors,
+    floors: sheet?.floors ?? pend?.floors ?? floors,
     cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0,
     zone: sheet ? ZONE_NUM[sheet.zone] : zoneOfY(py),
     alias: ALIAS[num] ?? [],
-    note: NOTE[num] ?? (cat === 'unknown' ? 'ไม่มีหมายเลข/ชื่อในแผนผังปี 2559 — ต้องระบุหน้างาน' : ''),
+    note: NOTE[num] ?? ((!sheet && pend?.note) || (cat === 'unknown' ? 'ไม่มีหมายเลข/ชื่อในแผนผังปี 2559 — ต้องระบุหน้างาน' : '')),
     sheet,
-    rooms: (sheetRooms as Room[]).filter((r) => r.buildingId === code),
-    services: (sheetServices as FloorService[]).filter((s) => s.buildingId === code),
+    rooms: sRooms.length ? sRooms : pend?.rooms ?? [],
+    services: sServices.length ? sServices : pend?.services ?? [],
     web: SERVICES[num] ?? null,
   };
 });
