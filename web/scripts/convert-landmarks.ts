@@ -1,6 +1,6 @@
 /**
- * แปลงโมเดลอาคาร 100 ปี (B02) และ 80 ปี (B01) ให้ตรง docs/model-contract.md → public/models/
- *   npx tsx scripts/convert-landmarks.ts <B02|B01> "<ต้นฉบับ .glb>" "<ป้ายที่แก้แล้ว .png>"
+ * แปลงโมเดลอาคาร 100 ปี (B02), 80 ปี (B01) และ 50 ปี (B58) ให้ตรง docs/model-contract.md → public/models/
+ *   npx tsx scripts/convert-landmarks.ts <B02|B01|B58> "<ต้นฉบับ .glb>" "<ป้ายที่แก้แล้ว .png>"
  * ป้ายที่แก้: เติมตัวเลขที่เป็นกล่อง · เอาตรา/สัญลักษณ์/ภาพบุคคลที่เป็นภาพวาดแทนออก
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -11,6 +11,12 @@ import draco3d from 'draco3dgltf';
 
 interface Cfg { drop: string[]; names: Record<string, string>; turn180: boolean; floors: number; floorHeight: number }
 const CFG: Record<string, Cfg> = {
+  // อาคาร 50 ปี: ชั้นล่างโล่ง + ห้องจัดกิจกรรมชั้น 2 (เจ้าของโค้ดยืนยัน 2 ชั้น) · ทิศด้านหน้ายังไม่ยืนยัน
+  B58: {
+    drop: ['ConcreteParkingPlaza', 'ParkingLineWhite', 'SideLawnGrass'], turn180: false, floors: 2, floorHeight: 5.3,
+    names: { WarmSandConcrete: 'wall', SandSlabTrim: 'trim', InteriorCreamWall: 'wall', TimberToneLouver: 'accent', DarkBronzeSubframe: 'trim',
+      BronzeMetalRailing: 'trim', TintedHallWindow: 'glass', Sign_50th_Anniversary: 'accent' },
+  },
   // อาคารเตี้ยของโมเดลอยู่ฝั่ง +Z (ใต้) ตรงกับฐานในแผนผัง จึงไม่หมุน · ตัดตะแกรงพัดลมแอร์ให้ไม่เกินงบสามเหลี่ยม
   B02: {
     drop: ['CampusPlazaGround', 'ACFanGrille'], turn180: false, floors: 15, floorHeight: 3.8,
@@ -27,7 +33,7 @@ const CFG: Record<string, Cfg> = {
 
 const [code, src, sign] = process.argv.slice(2);
 const cfg = CFG[code];
-if (!cfg || !existsSync(src) || !existsSync(sign)) throw new Error('ใช้: <B02|B01> <ต้นฉบับ .glb> <ป้าย .png>');
+if (!cfg || !existsSync(src) || !existsSync(sign)) throw new Error('ใช้: <B02|B01|B58> <ต้นฉบับ .glb> <ป้าย .png>');
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({
   'draco3d.encoder': await draco3d.createEncoderModule(),
