@@ -8,7 +8,7 @@ import { boxInModel, listModels, loadModel } from './models.ts';
 const { B, MAP } = plan;
 
 // เลขตามแผนผังใหม่ (scripts/lib/renumber.ts)
-const STYLE={modern:[2,3,6,7,8,12,13,14,15,26,27,28,29,31,33,34,37,40,41,43,44,45,46,47,48,49,50,51,52,55,56,110],arch:[5,11,42,105,57],shop:[4,21,22]};
+const STYLE={modern:[2,3,6,7,8,12,13,14,15,26,27,28,29,31,33,34,37,40,41,43,44,45,46,47,48,49,50,51,52,55,56,110,58],arch:[5,11,42,105,57],shop:[4,21,22]};
 const styleOf=id=>STYLE.modern.includes(id)?'modern':STYLE.arch.includes(id)?'arch':STYLE.shop.includes(id)?'shop':'pitched';
 const NOTE={...(plan.NOTE||{}),1:'รูปทรงอ้างอิงภาพออกแบบอาคาร'};
 const DATA = B.map(([id,name,cat,floors,rects,kind])=>{
