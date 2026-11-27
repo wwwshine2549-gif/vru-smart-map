@@ -342,16 +342,42 @@
     "phone": null,
     "tip": null,
     "verified": false
+   },
+   {
+    "buildingId": "B32",
+    "floor": 1,
+    "unit": "Uni Learning Center & Sandbox (ห้อง SCC)",
+    "room": null,
+    "tasks": [],
+    "docs": [],
+    "hours": null,
+    "queue": null,
+    "online": null,
+    "phone": null,
+    "tip": "นักศึกษาเรียกว่า \"ห้อง SCC\"",
+    "verified": false
    }
   ],
   "photos": [
    {
     "src": "photos/B32_UniLearningCenter_1.webp",
-    "caption": "Uni Learning Center & Sandbox By Valaya Alongkorn"
+    "caption": "Uni Learning Center & Sandbox By Valaya Alongkorn · ห้อง SCC ชั้น 1"
    },
    {
     "src": "photos/B32_UniLearningCenter_2.webp",
-    "caption": "Uni Learning Center & Sandbox · พื้นที่ด้านใน"
+    "caption": "ห้อง SCC ชั้น 1 · Uni Learning Center & Sandbox ด้านใน"
+   },
+   {
+    "src": "photos/B32_ห้องSCC_ชั้น1_2.webp",
+    "caption": "ห้อง SCC ชั้น 1 · เคาน์เตอร์ VRU Co-Learning Space (เบลอคน)"
+   },
+   {
+    "src": "photos/B32_ห้องSCC_ชั้น1_3.webp",
+    "caption": "ห้อง SCC ชั้น 1 · ชั้นหนังสือ"
+   },
+   {
+    "src": "photos/B32_ห้องSCC_ชั้น1_1.webp",
+    "caption": "โถงชั้น 1 หน้าห้อง SCC (เบลอคน)"
    },
    {
     "src": "photos/B32_ห้องประชุมชั้น5_1.webp",
