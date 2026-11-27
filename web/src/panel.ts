@@ -86,7 +86,13 @@ export function openPanel(b: Bld, opt: PanelOpt = {}) {
       : '';
 
   const photo = b.sheet?.photo;
-  $('pPhoto').innerHTML = photo
+  $('pPhoto').classList.toggle('gallery', b.photos.length > 0);
+  $('pPhoto').innerHTML = b.photos.length
+    ? b.photos.map((p) => {
+      const u = esc(encodeURI(import.meta.env.BASE_URL + p.src));
+      return `<figure><a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="${esc(p.caption)}" loading="lazy" decoding="async"></a><figcaption>${esc(p.caption)}</figcaption></figure>`;
+    }).join('')
+    : photo
     ? `<img src="${esc(import.meta.env.BASE_URL + photo)}" alt="${esc(b.name)}" loading="lazy" decoding="async">`
     : `<div>ยังไม่มีรูป — ทีมสำรวจ${z.short}<br><code>${b.code}_ภายนอก_1.jpg</code></div>`;
 

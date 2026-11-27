@@ -343,6 +343,28 @@
     "tip": null,
     "verified": false
    }
+  ],
+  "photos": [
+   {
+    "src": "photos/B32_UniLearningCenter_1.webp",
+    "caption": "Uni Learning Center & Sandbox By Valaya Alongkorn"
+   },
+   {
+    "src": "photos/B32_UniLearningCenter_2.webp",
+    "caption": "Uni Learning Center & Sandbox · พื้นที่ด้านใน"
+   },
+   {
+    "src": "photos/B32_ห้องประชุมชั้น5_1.webp",
+    "caption": "ห้องประชุมเพชรบุรีวิทยาลงกรณ์ · ชั้น 5 (เบลอช่องประตู)"
+   },
+   {
+    "src": "photos/B32_ห้องประชุมชั้น5_3.webp",
+    "caption": "ภายในห้องประชุมเพชรบุรีวิทยาลงกรณ์ · มุมที่ 1 (เบลอคนและจอฉาย)"
+   },
+   {
+    "src": "photos/B32_ห้องประชุมชั้น5_2.webp",
+    "caption": "ภายในห้องประชุมเพชรบุรีวิทยาลงกรณ์ · มุมที่ 2 (เบลอคนและจอฉาย)"
+   }
   ]
  }
 }

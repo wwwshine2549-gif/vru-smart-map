@@ -21,6 +21,8 @@ export interface PlanMap {
   stadium: { cx: number; cy: number; L: number; W: number; stand: [number, number, number, number] };
 }
 
+export interface Photo { src: string; caption: string }
+
 export interface Bld {
   /** เลขในแผนผัง: 1–48, 101–105 */
   num: number;
@@ -45,6 +47,8 @@ export interface Bld {
   sheet: Building | null;
   rooms: Room[];
   services: FloorService[];
+  /** รูปอ้างอิงจุดสำคัญ (คัดแล้ว: ไม่มีคน ลบ EXIF) */
+  photos: Photo[];
   /** บริการจากเว็บไซต์มหาวิทยาลัย (รอตรวจสอบ) */
   web: BuildingServices | null;
 }
@@ -63,7 +67,7 @@ const sheetById = new Map((sheetBuildings as Building[]).map((b) => [b.id, b]));
 
 /** ข้อมูลจากทีมที่ยังไม่ "ตรวจแล้ว" ใน Sheet (verified:false = ติดป้ายรอตรวจสอบ)
  *  แยกไฟล์ไว้ไม่ให้ npm run import เขียนทับ · เมื่อ Sheet มีข้อมูลที่ตรวจแล้ว ใช้ของ Sheet แทนอัตโนมัติ */
-const PENDING_DATA = pendingData as unknown as Record<string, { floors?: number; note?: string; rooms?: Room[]; services?: FloorService[] }>;
+const PENDING_DATA = pendingData as unknown as Record<string, { floors?: number; note?: string; rooms?: Room[]; services?: FloorService[]; photos?: Photo[] }>;
 
 export const BLDGS: Bld[] = (plan as unknown as { B: PlanRow[] }).B.map(([num, planName, cat, floors, rects, kind]) => {
   const code = codeOf(num);
@@ -93,6 +97,7 @@ export const BLDGS: Bld[] = (plan as unknown as { B: PlanRow[] }).B.map(([num, p
     sheet,
     rooms: sRooms.length ? sRooms : pend?.rooms ?? [],
     services: sServices.length ? sServices : pend?.services ?? [],
+    photos: pend?.photos ?? [],
     web: SERVICES[num] ?? null,
   };
 });

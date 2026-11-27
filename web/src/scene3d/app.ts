@@ -464,7 +464,8 @@ function checkModels(now){
 }
 
 /* ============ loop ============ */
-function resize(){ renderer.setSize(innerWidth,innerHeight,false); camera.aspect=innerWidth/innerHeight; camera.fov=camera.aspect<1?62:48; camera.updateProjectionMatrix(); }
+// ต้องตั้ง style ด้วย (ไม่ส่ง false) ไม่งั้นจอ DPR > 1 canvas แสดงใหญ่เกินจอ อาคารที่เลือกหลุดไปหลังแผง
+function resize(){ renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.fov=camera.aspect<1?62:48; camera.updateProjectionMatrix(); }
 addEventListener('resize',resize); resize();
 const LABEL_D=46, tagBoxes=[];
 // ป้ายที่เลือก/ชี้ วางก่อน แล้วตามด้วยอาคารที่ใกล้กล้อง
