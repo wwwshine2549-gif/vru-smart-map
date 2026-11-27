@@ -3,3 +3,6 @@ node_modules/
 *.xlsx
 __pycache__/
 web/dist/
+
+# ผลลัพธ์จาก npm run qr (สร้างใหม่ได้)
+qr/
